@@ -1,0 +1,1280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>J.A.R.V.I.S.</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/12.4.0/math.min.js"></script>
+<style>
+  :root{
+    --bg-deep:#03080d;
+    --bg-panel:#071823;
+    --cyan:#4fd8ff;
+    --cyan-bright:#a9f3ff;
+    --cyan-dim:#1b4965;
+    --text-dim:#5f92a8;
+    --amber:#ffb454;
+    --danger:#ff5b5b;
+    --spotify:#1db954;
+  }
+
+  *{box-sizing:border-box; margin:0; padding:0;}
+
+  html,body{
+    width:100%; height:100%;
+    background:
+      radial-gradient(ellipse at center, #061219 0%, #020508 75%, #000000 100%);
+    overflow:hidden;
+    font-family:'Share Tech Mono', monospace;
+    color:var(--cyan);
+  }
+
+  body{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    position:relative;
+  }
+
+  .grid-overlay{
+    position:absolute; inset:0;
+    background-image:
+      linear-gradient(rgba(79,216,255,0.035) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(79,216,255,0.035) 1px, transparent 1px);
+    background-size: 42px 42px;
+    pointer-events:none;
+    mask-image: radial-gradient(ellipse at center, black 0%, transparent 75%);
+  }
+
+  .scanline{
+    position:absolute; left:0; right:0; height:2px;
+    background: linear-gradient(90deg, transparent, rgba(79,216,255,0.5), transparent);
+    animation: sweep 6s linear infinite;
+    pointer-events:none;
+  }
+  @keyframes sweep{
+    0%{ top:0%; opacity:0; }
+    5%{ opacity:1; }
+    95%{ opacity:1; }
+    100%{ top:100%; opacity:0; }
+  }
+
+  .corner{
+    position:absolute;
+    font-size:11px;
+    letter-spacing:2px;
+    color:var(--text-dim);
+    line-height:1.6;
+    z-index:5;
+    max-width:220px;
+  }
+  .corner span, .corner b{ color:var(--cyan); font-weight:normal; }
+  .top-left{ top:28px; left:28px; }
+  .top-right{ top:28px; right:28px; text-align:right; }
+  .bottom-left{ bottom:28px; left:28px; }
+  .bottom-right{ bottom:28px; right:28px; text-align:right; }
+
+  .corner-bracket{
+    position:absolute; width:26px; height:26px; z-index:5;
+    border:1.5px solid var(--cyan-dim);
+    opacity:0.8;
+  }
+  .cb-tl{ top:10px; left:10px; border-right:none; border-bottom:none; }
+  .cb-tr{ top:10px; right:10px; border-left:none; border-bottom:none; }
+  .cb-bl{ bottom:10px; left:10px; border-right:none; border-top:none; }
+  .cb-br{ bottom:10px; right:10px; border-left:none; border-top:none; }
+
+  .waveform{
+    display:flex; align-items:flex-end; gap:3px; height:28px; margin-top:8px;
+  }
+  .waveform .bar{
+    width:3px; background:var(--cyan);
+    height:4px; opacity:0.6;
+    transition:height 0.08s ease, background 0.2s ease;
+  }
+
+  .core{
+    position:relative;
+    width:min(66vmin, 460px);
+    height:min(66vmin, 460px);
+    display:flex; align-items:center; justify-content:center;
+  }
+
+  .ring{
+    position:absolute;
+    border-radius:50%;
+    top:50%; left:50%;
+  }
+
+  .ring-outer-dash{
+    width:100%; height:100%;
+    transform:translate(-50%,-50%);
+    animation: spin 42s linear infinite;
+  }
+  .ring-ticks{
+    width:88%; height:88%;
+    transform:translate(-50%,-50%);
+    animation: spin-rev 30s linear infinite;
+    background:
+      repeating-conic-gradient(
+        var(--cyan-dim) 0deg 1.2deg,
+        transparent 1.2deg 9deg
+      );
+    -webkit-mask: radial-gradient(circle, transparent 96%, black 97%, black 100%, transparent 100.5%);
+    mask: radial-gradient(circle, transparent 96%, black 97%, black 100%, transparent 100.5%);
+    opacity:0.85;
+    border-radius:50%;
+  }
+  .ring-mid-dash{
+    width:70%; height:70%;
+    transform:translate(-50%,-50%);
+    animation: spin 18s linear infinite;
+  }
+  .ring-inner-thin{
+    width:56%; height:56%;
+    transform:translate(-50%,-50%);
+    border:1px solid rgba(79,216,255,0.35);
+    box-shadow: 0 0 12px rgba(79,216,255,0.15) inset;
+  }
+
+  .ring-inner-thin.pulse-listen{
+    animation: ring-pulse 1.4s ease-in-out infinite;
+    border-color: rgba(79,216,255,0.8);
+  }
+  .ring-inner-thin.pulse-speak{
+    animation: ring-pulse-amber 0.9s ease-in-out infinite;
+    border-color: rgba(255,180,84,0.85);
+  }
+  @keyframes ring-pulse{
+    0%,100%{ box-shadow:0 0 12px rgba(79,216,255,0.15) inset, 0 0 0 rgba(79,216,255,0); }
+    50%{ box-shadow:0 0 22px rgba(79,216,255,0.4) inset, 0 0 24px rgba(79,216,255,0.25); }
+  }
+  @keyframes ring-pulse-amber{
+    0%,100%{ box-shadow:0 0 12px rgba(255,180,84,0.2) inset, 0 0 0 rgba(255,180,84,0); }
+    50%{ box-shadow:0 0 26px rgba(255,180,84,0.5) inset, 0 0 28px rgba(255,180,84,0.3); }
+  }
+
+  .orbit{
+    width:100%; height:100%;
+    transform:translate(-50%,-50%);
+    animation: spin 9s linear infinite;
+  }
+  .orbit .dot{
+    position:absolute; top:0; left:50%;
+    width:6px; height:6px; margin-left:-3px;
+    border-radius:50%;
+    background:var(--cyan-bright);
+    box-shadow:0 0 8px 2px var(--cyan-bright);
+  }
+
+  @keyframes spin{ from{ transform:translate(-50%,-50%) rotate(0deg);} to{ transform:translate(-50%,-50%) rotate(360deg);} }
+  @keyframes spin-rev{ from{ transform:translate(-50%,-50%) rotate(360deg);} to{ transform:translate(-50%,-50%) rotate(0deg);} }
+
+  svg.dash-circle{ width:100%; height:100%; overflow:visible; }
+  svg.dash-circle circle{
+    fill:none;
+    stroke:var(--cyan);
+    stroke-width:1.4;
+    opacity:0.55;
+  }
+  .ring-mid-dash svg circle{ stroke:var(--cyan-bright); opacity:0.75; stroke-width:2; }
+
+  .center-text{
+    position:relative; z-index:4;
+    text-align:center;
+    width:64%;
+  }
+  .title{
+    font-family:'Orbitron', sans-serif;
+    font-weight:700;
+    font-size:clamp(16px, 2.6vmin, 26px);
+    letter-spacing:6px;
+    color:var(--cyan-bright);
+    text-shadow:
+      0 0 8px rgba(169,243,255,0.8),
+      0 0 24px rgba(79,216,255,0.5),
+      0 0 48px rgba(79,216,255,0.25);
+    animation: pulse-glow 3.4s ease-in-out infinite;
+  }
+  @keyframes pulse-glow{
+    0%,100%{ opacity:1; }
+    50%{ opacity:0.75; }
+  }
+  .subtitle{
+    margin-top:8px;
+    font-size:10px;
+    letter-spacing:4px;
+    color:var(--text-dim);
+    transition: color 0.4s ease;
+    min-height:13px;
+  }
+  .subtitle.listening{ color:var(--cyan); animation: blink 1.2s ease-in-out infinite; }
+  .subtitle.speaking{ color:var(--amber); }
+  @keyframes blink{ 0%,100%{opacity:1;} 50%{opacity:0.4;} }
+
+  .caption{
+    margin-top:8px;
+    font-size:9.5px;
+    letter-spacing:1px;
+    color:rgba(169,243,255,0.75);
+    min-height:13px;
+    max-width:94%;
+    margin-left:auto; margin-right:auto;
+  }
+
+  .hint{
+    margin-top:12px;
+    font-size:8px;
+    letter-spacing:1.1px;
+    color:rgba(95,146,168,0.5);
+    line-height:1.7;
+  }
+
+  .controls{
+    position:absolute;
+    bottom:74px;
+    left:50%;
+    transform:translateX(-50%);
+    display:flex;
+    gap:10px;
+    z-index:5;
+    flex-wrap:wrap;
+    justify-content:center;
+    max-width:90vw;
+  }
+  .hud-btn{
+    background:rgba(79,216,255,0.06);
+    border:1px solid var(--cyan-dim);
+    color:var(--cyan);
+    font-family:'Share Tech Mono', monospace;
+    font-size:10.5px;
+    letter-spacing:1.5px;
+    padding:9px 16px;
+    cursor:pointer;
+    transition: all 0.2s ease;
+    text-transform:uppercase;
+    white-space:nowrap;
+  }
+  .hud-btn:hover{
+    background:rgba(79,216,255,0.15);
+    border-color:var(--cyan);
+    box-shadow:0 0 14px rgba(79,216,255,0.3);
+  }
+  .hud-btn:active{ transform:scale(0.97); }
+  .hud-btn.active{
+    background:rgba(79,216,255,0.25);
+    color:var(--cyan-bright);
+    box-shadow:0 0 18px rgba(79,216,255,0.4);
+  }
+  .hud-btn.spotify-btn{
+    border-color:rgba(29,185,84,0.5);
+    color:var(--spotify);
+  }
+  .hud-btn.spotify-btn:hover{
+    border-color:var(--spotify);
+    box-shadow:0 0 14px rgba(29,185,84,0.35);
+  }
+  .hud-btn.spotify-btn.active{
+    background:rgba(29,185,84,0.2);
+    color:#7cf0a3;
+    box-shadow:0 0 18px rgba(29,185,84,0.4);
+  }
+
+  .footnote{
+    position:absolute;
+    bottom:24px;
+    left:50%;
+    transform:translateX(-50%);
+    font-size:8.5px;
+    letter-spacing:0.8px;
+    color:rgba(95,146,168,0.45);
+    text-align:center;
+    width:88%;
+    max-width:520px;
+    z-index:5;
+    line-height:1.6;
+  }
+
+  .data-panel{
+    position:absolute;
+    top:50%;
+    right:24px;
+    transform:translateY(-50%) translateX(24px);
+    width:280px;
+    max-height:70vh;
+    overflow-y:auto;
+    background:rgba(7,24,35,0.88);
+    border:1px solid var(--cyan-dim);
+    box-shadow:0 0 24px rgba(79,216,255,0.15);
+    padding:16px;
+    z-index:6;
+    opacity:0;
+    pointer-events:none;
+    transition: opacity 0.35s ease, transform 0.35s ease;
+  }
+  .data-panel.visible{
+    opacity:1;
+    transform:translateY(-50%) translateX(0);
+    pointer-events:auto;
+  }
+  .panel-title{
+    font-family:'Orbitron', sans-serif;
+    font-size:12px;
+    letter-spacing:2px;
+    color:var(--cyan-bright);
+    border-bottom:1px solid var(--cyan-dim);
+    padding-bottom:8px;
+    margin-bottom:10px;
+  }
+  .panel-img{
+    width:100%;
+    max-height:140px;
+    object-fit:cover;
+    margin-bottom:10px;
+    display:none;
+    filter:saturate(0.6) brightness(0.95);
+    border:1px solid var(--cyan-dim);
+  }
+  .panel-text{
+    font-size:11px;
+    line-height:1.6;
+    color:var(--text-dim);
+    letter-spacing:0.3px;
+  }
+  .panel-big-result{
+    font-family:'Orbitron', sans-serif;
+    font-size:26px;
+    color:var(--cyan-bright);
+    text-shadow:0 0 12px rgba(169,243,255,0.6);
+    margin:6px 0;
+    display:none;
+  }
+  .panel-canvas{
+    width:100%;
+    height:auto;
+    display:none;
+    margin-top:6px;
+  }
+
+  @media (max-width: 720px){
+    .data-panel{
+      right:50%;
+      top:auto;
+      bottom:190px;
+      transform:translateX(50%) translateY(10px);
+      width:80%;
+      max-width:320px;
+    }
+    .data-panel.visible{ transform:translateX(50%) translateY(0); }
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ animation:none !important; }
+  }
+</style>
+</head>
+<body>
+
+  <div class="grid-overlay"></div>
+  <div class="scanline"></div>
+
+  <div class="corner-bracket cb-tl"></div>
+  <div class="corner-bracket cb-tr"></div>
+  <div class="corner-bracket cb-bl"></div>
+  <div class="corner-bracket cb-br"></div>
+
+  <div class="corner top-left">
+    SYSTEM STATUS<br><span id="sysStatus">ONLINE</span>
+  </div>
+  <div class="corner top-right">
+    LOCAL TIME<br><span id="clock">--:--:--</span>
+  </div>
+  <div class="corner bottom-left">
+    AUDIO INPUT
+    <div class="waveform" id="waveform"></div>
+  </div>
+  <div class="corner bottom-right">
+    VOICE MODULE<br><span id="voiceStatus">INITIALIZING</span><br>
+    SPOTIFY<br><span id="spotifyStatus">NOT CONNECTED</span>
+  </div>
+
+  <div class="core">
+    <div class="ring ring-outer-dash">
+      <svg class="dash-circle" viewBox="0 0 100 100">
+        <circle cx="50" cy="50" r="49" stroke-dasharray="1.2 4" />
+      </svg>
+    </div>
+
+    <div class="ring ring-ticks"></div>
+
+    <div class="ring ring-mid-dash">
+      <svg class="dash-circle" viewBox="0 0 100 100">
+        <circle cx="50" cy="50" r="48" stroke-dasharray="18 6 4 6" />
+      </svg>
+    </div>
+
+    <div class="ring ring-inner-thin" id="innerRing"></div>
+
+    <div class="ring orbit"><div class="dot"></div></div>
+
+    <div class="center-text">
+      <div class="title">J.A.R.V.I.S.</div>
+      <div class="subtitle" id="statusText">STANDBY</div>
+      <div class="caption" id="caption"></div>
+      <div class="hint">
+        &ldquo;HEY JARVIS&rdquo; &middot; &ldquo;WHAT IS THE EMPIRE STATE BUILDING&rdquo; &middot; &ldquo;GRAPH X SQUARED&rdquo;<br>
+        &ldquo;PLAY [SONG]&rdquo; &middot; &ldquo;PAUSE&rdquo; &middot; &ldquo;SKIP&rdquo; &middot; &ldquo;WHAT'S PLAYING&rdquo; &middot; &ldquo;GO TO SLEEP&rdquo;
+      </div>
+    </div>
+  </div>
+
+  <div class="data-panel" id="dataPanel">
+    <div class="panel-title" id="panelTitle">DATA</div>
+    <img class="panel-img" id="panelImg" alt="">
+    <div class="panel-big-result" id="panelBig"></div>
+    <canvas class="panel-canvas" id="panelCanvas" width="500" height="300"></canvas>
+    <div class="panel-text" id="panelText"></div>
+  </div>
+
+  <div class="controls">
+    <button class="hud-btn" id="activateBtn">Activate Voice</button>
+    <button class="hud-btn" id="testBtn">Test Greeting</button>
+    <button class="hud-btn spotify-btn" id="spotifyBtn">Connect Spotify</button>
+  </div>
+
+  <div class="footnote" id="footnote">
+    Once you grant microphone access, JARVIS remembers it and resumes listening automatically on future visits.
+  </div>
+
+<script>
+  // =========================================================
+  // CONFIG
+  // =========================================================
+  const CONFIG = {
+    // ElevenLabs (optional, for a more natural voice). Leave blank to use browser voice.
+    ELEVEN_LABS_API_KEY: "",
+    ELEVEN_LABS_VOICE_ID: "612b878b113047d9a770c069c8b4fdfe",
+    ELEVEN_LABS_MODEL: "eleven_turbo_v2",
+
+    // Spotify (optional, for voice-controlled playback).
+    // 1. Create a free app at https://developer.spotify.com/dashboard
+    // 2. Copy its Client ID below.
+    // 3. In the app's settings on Spotify's site, add the Redirect URI shown
+    //    next to the "Connect Spotify" button on this page (it's auto-detected).
+    SPOTIFY_CLIENT_ID: ""
+  };
+  const SPOTIFY_REDIRECT_URI = window.location.origin + window.location.pathname;
+  const SPOTIFY_SCOPES = "user-read-playback-state user-modify-playback-state user-read-currently-playing";
+  // =========================================================
+
+  // ---------- clock ----------
+  function updateClock(){
+    const now = new Date();
+    document.getElementById('clock').textContent = now.toLocaleTimeString('en-US', {hour12:false});
+  }
+  updateClock();
+  setInterval(updateClock, 1000);
+
+  // ---------- ambient status line cycling (flavor) ----------
+  const sysStatusEl = document.getElementById('sysStatus');
+  const sysMessages = ["ONLINE", "ALL SYSTEMS NOMINAL", "ARC REACTOR STABLE", "DIAGNOSTICS CLEAR"];
+  let sysIdx = 0;
+  setInterval(() => {
+    sysIdx = (sysIdx + 1) % sysMessages.length;
+    sysStatusEl.textContent = sysMessages[sysIdx];
+  }, 5000);
+
+  // ---------- state ----------
+  const statusText = document.getElementById('statusText');
+  const captionEl = document.getElementById('caption');
+  const voiceStatus = document.getElementById('voiceStatus');
+  const activateBtn = document.getElementById('activateBtn');
+  const testBtn = document.getElementById('testBtn');
+  const waveform = document.getElementById('waveform');
+  const footnote = document.getElementById('footnote');
+  const innerRing = document.getElementById('innerRing');
+  const spotifyBtn = document.getElementById('spotifyBtn');
+  const spotifyStatusEl = document.getElementById('spotifyStatus');
+
+  const dataPanel = document.getElementById('dataPanel');
+  const panelTitle = document.getElementById('panelTitle');
+  const panelImg = document.getElementById('panelImg');
+  const panelText = document.getElementById('panelText');
+  const panelBig = document.getElementById('panelBig');
+  const panelCanvas = document.getElementById('panelCanvas');
+
+  const BAR_COUNT = 18;
+  for(let i=0;i<BAR_COUNT;i++){
+    const bar = document.createElement('div');
+    bar.className = 'bar';
+    waveform.appendChild(bar);
+  }
+  const bars = waveform.querySelectorAll('.bar');
+
+  function setStatus(mode){
+    statusText.classList.remove('listening','speaking');
+    innerRing.classList.remove('pulse-listen','pulse-speak');
+    if(mode === 'listening'){
+      statusText.textContent = 'LISTENING...';
+      statusText.classList.add('listening');
+      innerRing.classList.add('pulse-listen');
+    } else if(mode === 'speaking'){
+      statusText.textContent = 'SPEAKING...';
+      statusText.classList.add('speaking');
+      innerRing.classList.add('pulse-speak');
+    } else {
+      statusText.textContent = 'STANDBY';
+    }
+  }
+
+  // ---------- data panel helpers ----------
+  let panelHideTimer = null;
+  function showPanel(){
+    clearTimeout(panelHideTimer);
+    dataPanel.classList.add('visible');
+  }
+  function autoHidePanel(delayMs = 22000){
+    clearTimeout(panelHideTimer);
+    panelHideTimer = setTimeout(() => dataPanel.classList.remove('visible'), delayMs);
+  }
+  function resetPanel(){
+    panelImg.style.display = 'none';
+    panelBig.style.display = 'none';
+    panelCanvas.style.display = 'none';
+    panelText.textContent = '';
+  }
+  function showPanelLoading(topic){
+    resetPanel();
+    panelTitle.textContent = topic.toUpperCase();
+    panelText.textContent = 'RETRIEVING DATA...';
+    showPanel();
+  }
+  function showPanelArticle(title, extract, imgSrc){
+    resetPanel();
+    panelTitle.textContent = title.toUpperCase();
+    if(imgSrc){ panelImg.src = imgSrc; panelImg.style.display = 'block'; }
+    panelText.textContent = extract;
+    showPanel();
+    autoHidePanel();
+  }
+  function showPanelMath(expression, result){
+    resetPanel();
+    panelTitle.textContent = 'CALCULATION';
+    panelBig.textContent = result;
+    panelBig.style.display = 'block';
+    panelText.textContent = expression + ' = ' + result;
+    showPanel();
+    autoHidePanel();
+  }
+  function showPanelError(topic){
+    resetPanel();
+    panelTitle.textContent = 'NO DATA';
+    panelText.textContent = 'No results found for "' + topic + '", sir.';
+    showPanel();
+    autoHidePanel(6000);
+  }
+  function showPanelGraph(exprLabel){
+    resetPanel();
+    panelTitle.textContent = 'GRAPH: f(x) = ' + exprLabel;
+    panelCanvas.style.display = 'block';
+    showPanel();
+    autoHidePanel();
+    return panelCanvas;
+  }
+  function showNowPlaying(track){
+    resetPanel();
+    panelTitle.textContent = 'NOW PLAYING';
+    const art = track.album && track.album.images && track.album.images[0];
+    if(art){ panelImg.src = art.url; panelImg.style.display = 'block'; }
+    panelText.textContent = track.name + ' — ' + track.artists.map(a => a.name).join(', ');
+    showPanel();
+    autoHidePanel();
+  }
+
+  // ---------- response bank ----------
+  function pick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+
+  function greetingPhrase(){
+    const hour = new Date().getHours();
+    if(hour >= 23 || hour < 5){
+      return pick([
+        "Sir, it's rather late. Shall I dim the lights?",
+        "Burning the midnight oil again, sir?",
+        "Good to hear you, sir. Though you really should be asleep."
+      ]);
+    }
+    if(hour < 12){
+      return pick(["Good morning, sir.", "Good morning. I trust you slept well, sir.", "Rise and shine, sir."]);
+    }
+    if(hour < 18){
+      return pick(["Good afternoon, sir.", "Good afternoon. How can I be of assistance?", "Hello, sir. What can I do for you?"]);
+    }
+    return pick(["Good evening, sir.", "Good evening. Long day, sir?", "Evening, sir. Systems are running smoothly."]);
+  }
+
+  function statusLine(){
+    return pick([
+      "All systems are functioning within normal parameters, sir.",
+      "Everything is running smoothly on my end, sir.",
+      "Diagnostics complete. No issues to report, sir."
+    ]);
+  }
+
+  function timeLine(){
+    const now = new Date();
+    const t = now.toLocaleTimeString('en-US', {hour:'numeric', minute:'2-digit'});
+    return `It's ${t}, sir.`;
+  }
+
+  function thanksLine(){
+    return pick(["No problem, sir.", "Always a pleasure, sir.", "You're welcome, sir.", "Anytime, sir."]);
+  }
+
+  function sleepLine(){
+    return pick(["Powering down, sir. Call if you need me.", "Standing by, sir.", "Going quiet now, sir."]);
+  }
+
+  function confusionLine(){
+    return pick([
+      "I'm afraid I didn't quite catch that, sir.",
+      "My apologies, sir — that one's outside my parameters.",
+      "I don't quite follow, sir. Could you rephrase?",
+      "I'm drawing a blank on that one, sir.",
+      "That request appears to be malformed, sir.",
+      "Come again, sir? I didn't process that."
+    ]);
+  }
+
+  // ---------- speech output ----------
+  async function speak(text){
+    captionEl.textContent = '"' + text + '"';
+    setStatus('speaking');
+
+    if(CONFIG.ELEVEN_LABS_API_KEY){
+      try{
+        const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${CONFIG.ELEVEN_LABS_VOICE_ID}`, {
+          method: 'POST',
+          headers: {
+            'xi-api-key': CONFIG.ELEVEN_LABS_API_KEY,
+            'Content-Type': 'application/json',
+            'Accept': 'audio/mpeg'
+          },
+          body: JSON.stringify({
+            text: text,
+            model_id: CONFIG.ELEVEN_LABS_MODEL,
+            voice_settings: { stability: 0.45, similarity_boost: 0.8 }
+          })
+        });
+        if(!res.ok) throw new Error('ElevenLabs request failed: ' + res.status);
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const audio = new Audio(url);
+        audio.onended = () => {
+          setStatus(recognitionActive ? 'listening' : 'standby');
+          URL.revokeObjectURL(url);
+        };
+        audio.onerror = () => speakBrowser(text);
+        audio.play();
+        return;
+      }catch(err){
+        console.warn('ElevenLabs TTS failed, falling back to browser voice:', err.message);
+      }
+    }
+    speakBrowser(text);
+  }
+
+  function pickBrowserVoice(){
+    const voices = window.speechSynthesis.getVoices();
+    const preferred = voices.find(v => /Daniel|UK English Male|Google UK English Male|Male/i.test(v.name));
+    return preferred || voices.find(v => v.lang && v.lang.startsWith('en')) || voices[0];
+  }
+
+  function speakBrowser(text){
+    if(!('speechSynthesis' in window)){
+      setStatus(recognitionActive ? 'listening' : 'standby');
+      return;
+    }
+    window.speechSynthesis.cancel();
+    const utter = new SpeechSynthesisUtterance(text);
+    const v = pickBrowserVoice();
+    if(v) utter.voice = v;
+    utter.pitch = 0.82;
+    utter.rate = 0.96;
+    utter.onend = () => setStatus(recognitionActive ? 'listening' : 'standby');
+    window.speechSynthesis.speak(utter);
+  }
+
+  if('speechSynthesis' in window){
+    window.speechSynthesis.onvoiceschanged = () => {};
+  }
+
+  testBtn.addEventListener('click', () => speak(greetingPhrase()));
+
+  // ---------- Wikipedia lookups ----------
+  async function wikipediaLookup(topic){
+    topic = topic.trim().replace(/[?.!]+$/, '');
+    if(!topic){ return; }
+    showPanelLoading(topic);
+    try{
+      let title = topic;
+      let res = await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(topic)}`);
+      if(!res.ok){
+        const searchRes = await fetch(`https://en.wikipedia.org/w/api.php?action=opensearch&search=${encodeURIComponent(topic)}&limit=1&namespace=0&format=json&origin=*`);
+        const searchData = await searchRes.json();
+        if(searchData[1] && searchData[1][0]){
+          title = searchData[1][0];
+          res = await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title)}`);
+        }
+      }
+      if(!res.ok) throw new Error('not found');
+      const data = await res.json();
+      const extract = data.extract || 'No summary available.';
+      const thumb = data.thumbnail ? data.thumbnail.source : null;
+      showPanelArticle(data.title || title, extract, thumb);
+      const shortAnswer = extract.split('. ').slice(0, 2).join('. ');
+      speak(shortAnswer.endsWith('.') ? shortAnswer : shortAnswer + '.');
+    }catch(err){
+      console.warn('Wikipedia lookup failed:', err);
+      showPanelError(topic);
+      speak(`I couldn't find anything on that, sir.`);
+    }
+  }
+
+  // ---------- math parsing ----------
+  function wordsToMathExpr(raw){
+    let s = ' ' + raw.toLowerCase() + ' ';
+    s = s.replace(/\bwhat is\b|\bwhat's\b|\bcalculate\b|\bsolve\b|\bequals\b|\bequal to\b/g, ' ');
+    s = s.replace(/square root of ([\w.]+)/g, 'sqrt($1)');
+    s = s.replace(/([\w.]+) squared/g, '($1)^2');
+    s = s.replace(/([\w.]+) cubed/g, '($1)^3');
+    s = s.replace(/to the power of/g, '^');
+    s = s.replace(/\bplus\b/g, '+');
+    s = s.replace(/\bminus\b/g, '-');
+    s = s.replace(/\btimes\b|\bmultiplied by\b/g, '*');
+    s = s.replace(/\bdivided by\b|\bover\b/g, '/');
+    s = s.replace(/\bpercent\b/g, '/100');
+    return s.trim();
+  }
+
+  function wordsToFunctionExpr(raw){
+    let s = ' ' + raw.toLowerCase() + ' ';
+    s = s.replace(/\bgraph\b|\bplot\b|\bof\b(?! x)/g, ' ');
+    s = s.replace(/sine of x|sin of x/g, 'sin(x)');
+    s = s.replace(/cosine of x|cos of x/g, 'cos(x)');
+    s = s.replace(/tangent of x|tan of x/g, 'tan(x)');
+    s = s.replace(/square root of x/g, 'sqrt(x)');
+    s = s.replace(/x squared/g, 'x^2');
+    s = s.replace(/x cubed/g, 'x^3');
+    s = s.trim();
+    return s || 'x';
+  }
+
+  function drawGraph(canvas, exprStr){
+    const ctx = canvas.getContext('2d');
+    const w = canvas.width, h = canvas.height;
+    ctx.clearRect(0, 0, w, h);
+    ctx.fillStyle = 'rgba(7,24,35,0.4)';
+    ctx.fillRect(0, 0, w, h);
+
+    const range = 10;
+    const toY = y => h/2 - (y / range) * (h/2 * 0.9);
+
+    ctx.strokeStyle = 'rgba(79,216,255,0.25)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(0, h/2); ctx.lineTo(w, h/2);
+    ctx.moveTo(w/2, 0); ctx.lineTo(w/2, h);
+    ctx.stroke();
+
+    let compiled;
+    try{ compiled = math.compile(exprStr); }catch(err){ return false; }
+
+    ctx.strokeStyle = '#a9f3ff';
+    ctx.lineWidth = 2;
+    ctx.shadowColor = 'rgba(79,216,255,0.6)';
+    ctx.shadowBlur = 6;
+    ctx.beginPath();
+    let started = false;
+    for(let px = 0; px <= w; px++){
+      const x = (px / w) * (range*2) - range;
+      let y;
+      try{ y = compiled.evaluate({x}); }catch(e){ y = null; }
+      if(typeof y !== 'number' || !isFinite(y) || Math.abs(y) > range*3){
+        started = false;
+        continue;
+      }
+      const py = toY(y);
+      if(!started){ ctx.moveTo(px, py); started = true; }
+      else{ ctx.lineTo(px, py); }
+    }
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+    return true;
+  }
+
+  // ---------- Spotify: PKCE auth ----------
+  function generateRandomString(length){
+    const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    let text = '';
+    const values = crypto.getRandomValues(new Uint8Array(length));
+    values.forEach(v => text += possible[v % possible.length]);
+    return text;
+  }
+  function base64urlencode(buffer){
+    let str = '';
+    const bytes = new Uint8Array(buffer);
+    for(let i=0;i<bytes.byteLength;i++){ str += String.fromCharCode(bytes[i]); }
+    return btoa(str).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+  }
+  async function generateCodeChallenge(verifier){
+    const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier));
+    return base64urlencode(digest);
+  }
+
+  async function connectSpotify(){
+    if(!CONFIG.SPOTIFY_CLIENT_ID){
+      alert('Add your Spotify Client ID in the CONFIG block first.\n\nRedirect URI to register in your Spotify app settings:\n' + SPOTIFY_REDIRECT_URI);
+      return;
+    }
+    const verifier = generateRandomString(64);
+    localStorage.setItem('spotify_verifier', verifier);
+    const challenge = await generateCodeChallenge(verifier);
+    const params = new URLSearchParams({
+      client_id: CONFIG.SPOTIFY_CLIENT_ID,
+      response_type: 'code',
+      redirect_uri: SPOTIFY_REDIRECT_URI,
+      scope: SPOTIFY_SCOPES,
+      code_challenge_method: 'S256',
+      code_challenge: challenge
+    });
+    window.location = 'https://accounts.spotify.com/authorize?' + params.toString();
+  }
+
+  function saveSpotifyTokens(data){
+    localStorage.setItem('spotify_access_token', data.access_token);
+    if(data.refresh_token) localStorage.setItem('spotify_refresh_token', data.refresh_token);
+    localStorage.setItem('spotify_expires_at', String(Date.now() + (data.expires_in || 3600) * 1000));
+  }
+
+  async function refreshSpotifyToken(){
+    const refresh_token = localStorage.getItem('spotify_refresh_token');
+    if(!refresh_token || !CONFIG.SPOTIFY_CLIENT_ID) return null;
+    try{
+      const body = new URLSearchParams({
+        grant_type: 'refresh_token',
+        refresh_token,
+        client_id: CONFIG.SPOTIFY_CLIENT_ID
+      });
+      const res = await fetch('https://accounts.spotify.com/api/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body
+      });
+      const data = await res.json();
+      if(data.access_token){
+        saveSpotifyTokens({ ...data, refresh_token: data.refresh_token || refresh_token });
+        return data.access_token;
+      }
+    }catch(err){ console.warn('Spotify token refresh failed:', err); }
+    return null;
+  }
+
+  async function getValidSpotifyToken(){
+    const token = localStorage.getItem('spotify_access_token');
+    const expiresAt = parseInt(localStorage.getItem('spotify_expires_at') || '0', 10);
+    if(token && Date.now() < expiresAt - 5000) return token;
+    return await refreshSpotifyToken();
+  }
+
+  async function handleSpotifyRedirect(){
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get('code');
+    if(!code) return;
+    const verifier = localStorage.getItem('spotify_verifier');
+    try{
+      const body = new URLSearchParams({
+        client_id: CONFIG.SPOTIFY_CLIENT_ID,
+        grant_type: 'authorization_code',
+        code,
+        redirect_uri: SPOTIFY_REDIRECT_URI,
+        code_verifier: verifier
+      });
+      const res = await fetch('https://accounts.spotify.com/api/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body
+      });
+      const data = await res.json();
+      if(data.access_token){
+        saveSpotifyTokens(data);
+        window.history.replaceState({}, document.title, window.location.pathname);
+        updateSpotifyUI(true);
+      }
+    }catch(err){
+      console.warn('Spotify auth exchange failed:', err);
+    }
+  }
+
+  function updateSpotifyUI(connected){
+    if(connected){
+      spotifyStatusEl.textContent = 'CONNECTED';
+      spotifyBtn.textContent = 'Spotify Connected';
+      spotifyBtn.classList.add('active');
+    } else {
+      spotifyStatusEl.textContent = 'NOT CONNECTED';
+      spotifyBtn.textContent = 'Connect Spotify';
+      spotifyBtn.classList.remove('active');
+    }
+  }
+
+  spotifyBtn.addEventListener('click', connectSpotify);
+  spotifyBtn.title = 'Redirect URI to register in your Spotify app: ' + SPOTIFY_REDIRECT_URI;
+
+  async function spotifyFetch(path, options = {}){
+    const token = await getValidSpotifyToken();
+    if(!token) throw new Error('not_connected');
+    return fetch('https://api.spotify.com/v1' + path, {
+      ...options,
+      headers: { ...(options.headers || {}), 'Authorization': 'Bearer ' + token }
+    });
+  }
+
+  function handleSpotifyError(err){
+    if(err && err.message === 'not_connected'){
+      speak('Spotify is not connected yet, sir.');
+    } else {
+      console.warn(err);
+      speak('I ran into trouble reaching Spotify, sir.');
+    }
+  }
+
+  async function spotifyPlay(query){
+    try{
+      if(query){
+        const searchRes = await spotifyFetch('/search?q=' + encodeURIComponent(query) + '&type=track&limit=1');
+        const searchData = await searchRes.json();
+        const track = searchData.tracks && searchData.tracks.items && searchData.tracks.items[0];
+        if(!track){ speak("I couldn't find that track, sir."); return; }
+        const res = await spotifyFetch('/me/player/play', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ uris: [track.uri] })
+        });
+        if(res.status === 404){ speak("I don't see an active Spotify device, sir. Open Spotify first."); return; }
+        speak(`Playing ${track.name} by ${track.artists[0].name}, sir.`);
+        showNowPlaying(track);
+      } else {
+        const res = await spotifyFetch('/me/player/play', { method: 'PUT' });
+        if(res.status === 404){ speak("I don't see an active Spotify device, sir."); return; }
+        speak('Resuming playback, sir.');
+      }
+    }catch(err){ handleSpotifyError(err); }
+  }
+
+  async function spotifyPause(){
+    try{
+      const res = await spotifyFetch('/me/player/pause', { method: 'PUT' });
+      if(res.status === 404){ speak('No active device, sir.'); return; }
+      speak('Music paused, sir.');
+    }catch(err){ handleSpotifyError(err); }
+  }
+
+  async function spotifyNext(){
+    try{ await spotifyFetch('/me/player/next', { method: 'POST' }); speak('Skipping, sir.'); }
+    catch(err){ handleSpotifyError(err); }
+  }
+
+  async function spotifyPrevious(){
+    try{ await spotifyFetch('/me/player/previous', { method: 'POST' }); speak('Going back, sir.'); }
+    catch(err){ handleSpotifyError(err); }
+  }
+
+  async function spotifyNowPlaying(){
+    try{
+      const res = await spotifyFetch('/me/player/currently-playing');
+      if(res.status === 204){ speak('Nothing is playing right now, sir.'); return; }
+      const data = await res.json();
+      if(data && data.item){
+        speak(`This is ${data.item.name} by ${data.item.artists[0].name}, sir.`);
+        showNowPlaying(data.item);
+      } else {
+        speak('Nothing is playing right now, sir.');
+      }
+    }catch(err){ handleSpotifyError(err); }
+  }
+
+  // ---------- command handling ----------
+  let lastTriggerTime = 0;
+  const COOLDOWN_MS = 2000;
+
+  function handleTranscript(transcript){
+    const now = Date.now();
+    if(now - lastTriggerTime < COOLDOWN_MS) return;
+    const t = transcript.toLowerCase().trim();
+
+    if(t.includes('go to sleep') || t.includes('power down') || t.includes('shut down')){
+      lastTriggerTime = now;
+      speak(sleepLine());
+      setTimeout(() => stopRecognition(), 1400);
+      return;
+    }
+    if(t.includes('status report') || t.includes('how are you')){
+      lastTriggerTime = now; speak(statusLine()); return;
+    }
+    if(t.includes('what time') || t.includes("what's the time")){
+      lastTriggerTime = now; speak(timeLine()); return;
+    }
+    if(t.includes('thank you') || t.includes('thanks')){
+      lastTriggerTime = now; speak(thanksLine()); return;
+    }
+
+    // spotify commands (checked before generic "what is/what's" patterns)
+    if(t.includes('connect spotify')){
+      lastTriggerTime = now; connectSpotify(); return;
+    }
+    if(t.includes("what's playing") || t.includes('what is playing') || t.includes('what song is this')){
+      lastTriggerTime = now; spotifyNowPlaying(); return;
+    }
+    if(t === 'pause' || t.includes('pause the music') || t.includes('pause music')){
+      lastTriggerTime = now; spotifyPause(); return;
+    }
+    if(t.includes('skip') || t.includes('next song')){
+      lastTriggerTime = now; spotifyNext(); return;
+    }
+    if(t.includes('previous song') || t.includes('go back a song') || t.includes('last song')){
+      lastTriggerTime = now; spotifyPrevious(); return;
+    }
+    if(t.startsWith('play ') || t === 'play music' || t === 'play some music'){
+      lastTriggerTime = now;
+      let query = t.replace(/^play\s+/, '').replace(/\bon spotify\b/, '').trim();
+      if(query === 'music' || query === 'some music' || query === '') query = null;
+      spotifyPlay(query);
+      return;
+    }
+
+    // graph / plot
+    if(/^(graph|plot)\b/.test(t)){
+      lastTriggerTime = now;
+      const exprStr = wordsToFunctionExpr(t);
+      const canvas = showPanelGraph(exprStr);
+      const ok = drawGraph(canvas, exprStr);
+      speak(ok ? "Here's the graph, sir." : "I couldn't plot that one, sir.");
+      return;
+    }
+
+    // math questions
+    if(/^(what is|what's|calculate|solve)\b/.test(t)){
+      const mathExpr = wordsToMathExpr(t);
+      if(/[\d]/.test(mathExpr)){
+        try{
+          const result = math.evaluate(mathExpr);
+          if(typeof result === 'number' && isFinite(result)){
+            lastTriggerTime = now;
+            const rounded = Math.round(result * 10000) / 10000;
+            showPanelMath(mathExpr, rounded);
+            speak(`That's ${rounded}, sir.`);
+            return;
+          }
+        }catch(err){ /* not valid math, fall through */ }
+      }
+    }
+
+    // wikipedia knowledge questions
+    const wikiMatch = t.match(/^(what is|what's|who is|tell me about|define)\s+(.+)/);
+    if(wikiMatch){
+      lastTriggerTime = now;
+      wikipediaLookup(wikiMatch[2]);
+      return;
+    }
+
+    if(t.includes('hey jarvis') || t.includes('hey, jarvis')){
+      lastTriggerTime = now;
+      speak(greetingPhrase());
+      return;
+    }
+
+    // fallback: only respond with confusion if it heard its own name
+    if(t.includes('jarvis')){
+      lastTriggerTime = now;
+      speak(confusionLine());
+    }
+  }
+
+  // ---------- speech recognition (self-healing) ----------
+  let recognitionActive = false;
+  let recognition = null;
+  let wantsToListen = false;
+  let consecutiveErrors = 0;
+  let restartTimer = null;
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+  function buildRecognition(){
+    const rec = new SpeechRecognition();
+    rec.continuous = true;
+    rec.interimResults = true;
+    rec.lang = 'en-US';
+
+    rec.onstart = () => {
+      recognitionActive = true;
+      consecutiveErrors = 0;
+      voiceStatus.textContent = 'ONLINE';
+      setStatus('listening');
+      activateBtn.textContent = 'Deactivate Voice';
+      activateBtn.classList.add('active');
+      requestWakeLock();
+    };
+
+    rec.onerror = (e) => {
+      if(e.error === 'not-allowed' || e.error === 'service-not-allowed'){
+        wantsToListen = false;
+        voiceStatus.textContent = 'MIC BLOCKED';
+        footnote.textContent = 'Microphone access was blocked. Serve this over HTTPS or localhost (not file://) and allow the mic prompt.';
+        return;
+      }
+      consecutiveErrors++;
+    };
+
+    rec.onend = () => {
+      recognitionActive = false;
+      activateBtn.textContent = 'Activate Voice';
+      activateBtn.classList.remove('active');
+      setStatus('standby');
+
+      if(!wantsToListen){
+        voiceStatus.textContent = 'OFFLINE';
+        return;
+      }
+      if(consecutiveErrors > 10){
+        voiceStatus.textContent = 'NEEDS REACTIVATION';
+        footnote.textContent = 'Voice module hit repeated errors and stopped. Click Activate Voice to restart it.';
+        wantsToListen = false;
+        return;
+      }
+      voiceStatus.textContent = 'RECONNECTING...';
+      const delay = Math.min(300 + consecutiveErrors * 350, 4000);
+      clearTimeout(restartTimer);
+      restartTimer = setTimeout(() => {
+        try{ recognition.start(); }catch(e){ /* may already be starting */ }
+      }, delay);
+    };
+
+    rec.onresult = (event) => {
+      let transcript = '';
+      let isFinal = false;
+      for(let i = event.resultIndex; i < event.results.length; i++){
+        transcript += event.results[i][0].transcript;
+        if(event.results[i].isFinal) isFinal = true;
+      }
+      if(isFinal) handleTranscript(transcript);
+    };
+
+    return rec;
+  }
+
+  function startRecognition(){
+    if(!SpeechRecognition){
+      voiceStatus.textContent = 'UNSUPPORTED BROWSER';
+      footnote.textContent = 'This browser does not support voice recognition. Try Chrome or Edge on desktop.';
+      return;
+    }
+    wantsToListen = true;
+    consecutiveErrors = 0;
+    recognition = buildRecognition();
+    try{ recognition.start(); }catch(err){ console.error(err); }
+  }
+
+  function stopRecognition(){
+    wantsToListen = false;
+    clearTimeout(restartTimer);
+    if(recognition) recognition.stop();
+    if(analyserCtx){ analyserCtx.close(); analyserCtx = null; }
+    releaseWakeLock();
+  }
+
+  // ---------- wake lock ----------
+  let wakeLock = null;
+  async function requestWakeLock(){
+    try{ if('wakeLock' in navigator){ wakeLock = await navigator.wakeLock.request('screen'); } }
+    catch(err){ /* ignore */ }
+  }
+  function releaseWakeLock(){
+    if(wakeLock){ wakeLock.release().catch(()=>{}); wakeLock = null; }
+  }
+  document.addEventListener('visibilitychange', () => {
+    if(document.visibilityState === 'visible' && wantsToListen && !wakeLock){ requestWakeLock(); }
+  });
+
+  // ---------- mic level -> waveform ----------
+  let analyserCtx = null;
+  async function startWaveform(){
+    try{
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      analyserCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const source = analyserCtx.createMediaStreamSource(stream);
+      const analyser = analyserCtx.createAnalyser();
+      analyser.fftSize = 64;
+      source.connect(analyser);
+      const data = new Uint8Array(analyser.frequencyBinCount);
+
+      function tick(){
+        if(!analyserCtx) return;
+        analyser.getByteFrequencyData(data);
+        bars.forEach((bar, i) => {
+          const v = data[i % data.length] || 0;
+          const hgt = Math.max(4, (v/255) * 28);
+          bar.style.height = hgt + 'px';
+          bar.style.background = recognitionActive ? 'var(--cyan)' : 'var(--cyan-dim)';
+          bar.style.opacity = 0.5 + (v/255)*0.5;
+        });
+        requestAnimationFrame(tick);
+      }
+      tick();
+    }catch(err){ console.warn('Mic waveform unavailable:', err.message); }
+  }
+
+  activateBtn.addEventListener('click', () => {
+    if(wantsToListen){
+      stopRecognition();
+      voiceStatus.textContent = 'OFFLINE';
+    } else {
+      startRecognition();
+      startWaveform();
+    }
+  });
+
+  setInterval(() => {
+    if(!analyserCtx){
+      bars.forEach(bar => {
+        const hgt = 4 + Math.random()*6;
+        bar.style.height = hgt + 'px';
+        bar.style.opacity = 0.25 + Math.random()*0.2;
+      });
+    }
+  }, 400);
+
+  voiceStatus.textContent = SpeechRecognition ? 'READY' : 'UNSUPPORTED';
+
+  // ---------- auto-resume listening if permission already granted ----------
+  async function tryAutoStart(){
+    if(!navigator.permissions || !navigator.permissions.query) return;
+    try{
+      const status = await navigator.permissions.query({ name: 'microphone' });
+      if(status.state === 'granted'){ startRecognition(); startWaveform(); }
+      status.onchange = () => {
+        if(status.state === 'granted' && !wantsToListen){ startRecognition(); startWaveform(); }
+      };
+    }catch(err){ /* Firefox doesn't support querying 'microphone' — ignore */ }
+  }
+
+  // ---------- boot ----------
+  (async function boot(){
+    if(localStorage.getItem('spotify_access_token')){ updateSpotifyUI(true); }
+    await handleSpotifyRedirect();
+    tryAutoStart();
+  })();
+</script>
+
+</body>
+</html>
