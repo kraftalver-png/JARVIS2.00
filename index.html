@@ -3,1143 +3,2000 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>J.A.R.V.I.S. // Mark-V HUD</title>
+<title>J.A.R.V.I.S. // Mark-VI HUD</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/12.4.0/math.min.js"></script>
 <style>
   :root{
-    --bg-deep:#03080d;
-    --bg-panel:rgba(7,24,35,0.92);
-    --cyan:#4fd8ff;
-    --cyan-bright:#a9f3ff;
-    --cyan-dim:#1b4965;
-    --cyan-glow:rgba(79,216,255,0.4);
-    --text-dim:#5f92a8;
-    --amber:#ffb454;
-    --danger:#ff5b5b;
-    --spotify:#1db954;
+    --bg-deep: #02060a;
+    --bg-panel: rgba(7, 24, 35, 0.94);
+    --cyan: #4fd8ff;
+    --cyan-bright: #a9f3ff;
+    --cyan-dim: #11344a;
+    --cyan-glow: rgba(79, 216, 255, 0.35);
+    --text-dim: #5c8b9f;
+    --amber: #ffb454;
+    --danger: #ff5b5b;
+    --spotify: #1db954;
   }
-  [data-theme="gold"]{--cyan:#ffd166;--cyan-bright:#fff3b0;--cyan-dim:#795e1e;--cyan-glow:rgba(255,209,102,0.4);--text-dim:#a6915c;}
-  [data-theme="emerald"]{--cyan:#06d6a0;--cyan-bright:#b7ffeb;--cyan-dim:#105944;--cyan-glow:rgba(6,214,160,0.4);--text-dim:#4d937f;}
-  [data-theme="crimson"]{--cyan:#ff4d6d;--cyan-bright:#ffccd5;--cyan-dim:#6c1827;--cyan-glow:rgba(255,77,109,0.4);--text-dim:#a35d6a;}
+  [data-theme="gold"] {
+    --cyan: #ffd166;
+    --cyan-bright: #fff3b0;
+    --cyan-dim: #5c4714;
+    --cyan-glow: rgba(255, 209, 102, 0.35);
+    --text-dim: #9c895c;
+  }
+  [data-theme="emerald"] {
+    --cyan: #06d6a0;
+    --cyan-bright: #b7ffeb;
+    --cyan-dim: #074030;
+    --cyan-glow: rgba(6, 214, 160, 0.35);
+    --text-dim: #4f8576;
+  }
+  [data-theme="crimson"] {
+    --cyan: #ff4d6d;
+    --cyan-bright: #ffccd5;
+    --cyan-dim: #54111d;
+    --cyan-glow: rgba(255, 77, 109, 0.35);
+    --text-dim: #a15d6a;
+  }
 
-  *{box-sizing:border-box;margin:0;padding:0;user-select:none;}
-  html,body{width:100%;height:100%;background:radial-gradient(ellipse at center,#061219 0%,#020508 75%,#000 100%);overflow:hidden;font-family:'Share Tech Mono',monospace;color:var(--cyan);}
-  body{display:flex;align-items:center;justify-content:center;position:relative;}
+  *{ box-sizing:border-box; margin:0; padding:0; user-select:none; }
 
-  .grid-overlay{position:absolute;inset:0;background-image:linear-gradient(rgba(79,216,255,0.035) 1px,transparent 1px),linear-gradient(90deg,rgba(79,216,255,0.035) 1px,transparent 1px);background-size:44px 44px;pointer-events:none;mask-image:radial-gradient(ellipse at center,black 0%,transparent 80%);}
-  .scanline{position:absolute;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--cyan-glow),transparent);animation:sweep 7s linear infinite;pointer-events:none;}
-  @keyframes sweep{0%{top:0%;opacity:0;}5%{opacity:.8;}95%{opacity:.8;}100%{top:100%;opacity:0;}}
+  html, body{
+    width:100%; height:100%;
+    background: radial-gradient(ellipse at center, #05131f 0%, #010407 80%, #000000 100%);
+    overflow:hidden;
+    font-family:'Share Tech Mono', monospace;
+    color:var(--cyan);
+    transition: color 0.3s ease;
+  }
 
-  .corner{position:absolute;font-size:11px;letter-spacing:2px;color:var(--text-dim);line-height:1.6;z-index:5;max-width:260px;}
-  .corner span{color:var(--cyan);font-weight:normal;}
-  .top-left{top:24px;left:28px;}.top-right{top:24px;right:28px;text-align:right;}
-  .bottom-left{bottom:28px;left:28px;}.bottom-right{bottom:28px;right:28px;text-align:right;}
+  body{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    position:relative;
+  }
 
-  .corner-bracket{position:absolute;width:24px;height:24px;z-index:5;border:1.5px solid var(--cyan-dim);opacity:.85;}
-  .cb-tl{top:10px;left:10px;border-right:none;border-bottom:none;}
-  .cb-tr{top:10px;right:10px;border-left:none;border-bottom:none;}
-  .cb-bl{bottom:10px;left:10px;border-right:none;border-top:none;}
-  .cb-br{bottom:10px;right:10px;border-left:none;border-top:none;}
+  /* Sci-Fi HUD Overlays */
+  .grid-overlay{
+    position:absolute; inset:0;
+    background-image:
+      linear-gradient(rgba(79,216,255,0.02) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(79,216,255,0.02) 1px, transparent 1px);
+    background-size: 50px 50px;
+    pointer-events:none;
+    mask-image: radial-gradient(ellipse at center, black 0%, transparent 85%);
+  }
 
-  .waveform{display:flex;align-items:flex-end;gap:2.5px;height:28px;margin-top:8px;}
-  .waveform .bar{width:3px;background:var(--cyan);height:4px;opacity:.6;transition:height .08s ease;border-radius:1px;}
+  .scanline{
+    position:absolute; left:0; right:0; height:4px;
+    background: linear-gradient(180deg, transparent, var(--cyan-glow), transparent);
+    animation: sweep 8s linear infinite;
+    pointer-events:none;
+  }
+  @keyframes sweep{
+    0%{ top:-10%; opacity:0; }
+    10%{ opacity:1; }
+    90%{ opacity:1; }
+    100%{ top:110%; opacity:0; }
+  }
 
-  .core{position:relative;width:min(62vmin,420px);height:min(62vmin,420px);display:flex;align-items:center;justify-content:center;}
+  /* Core Corner Telemetry */
+  .corner{
+    position:absolute;
+    font-size:11px;
+    letter-spacing:2px;
+    color:var(--text-dim);
+    line-height:1.7;
+    z-index:5;
+    max-width:280px;
+  }
+  .corner span{ color:var(--cyan); font-weight:normal; }
+  .top-left{ top:24px; left:28px; }
+  .top-right{ top:24px; right:28px; text-align:right; }
+  .bottom-left{ bottom:28px; left:28px; }
+  .bottom-right{ bottom:28px; right:28px; text-align:right; }
 
-  .ring{position:absolute;border-radius:50%;top:50%;left:50%;pointer-events:none;}
-  .ring-outer-dash{width:100%;height:100%;transform:translate(-50%,-50%);animation:spin 45s linear infinite;}
-  .ring-ticks{width:88%;height:88%;transform:translate(-50%,-50%);animation:spin-rev 32s linear infinite;background:repeating-conic-gradient(var(--cyan-dim) 0deg 1.2deg,transparent 1.2deg 9deg);-webkit-mask:radial-gradient(circle,transparent 96%,black 97%,black 100%,transparent 100.5%);mask:radial-gradient(circle,transparent 96%,black 97%,black 100%,transparent 100.5%);opacity:.85;}
-  .ring-mid-dash{width:72%;height:72%;transform:translate(-50%,-50%);animation:spin 20s linear infinite;}
-  .ring-inner-thin{width:56%;height:56%;transform:translate(-50%,-50%);border:1px solid rgba(79,216,255,.35);box-shadow:0 0 12px var(--cyan-glow) inset;transition:all .3s ease;}
-  .ring-inner-thin.pulse-listen{animation:ring-pulse 1.4s ease-in-out infinite;border-color:var(--cyan);}
-  .ring-inner-thin.pulse-speak{animation:ring-pulse-amber .9s ease-in-out infinite;border-color:var(--amber);}
-  @keyframes ring-pulse{0%,100%{box-shadow:0 0 12px var(--cyan-glow) inset,0 0 0 transparent;}50%{box-shadow:0 0 24px var(--cyan-glow) inset,0 0 28px var(--cyan-glow);}}
-  @keyframes ring-pulse-amber{0%,100%{box-shadow:0 0 12px rgba(255,180,84,.2) inset;}50%{box-shadow:0 0 28px rgba(255,180,84,.6) inset,0 0 32px rgba(255,180,84,.4);}}
-  .orbit{width:100%;height:100%;transform:translate(-50%,-50%);animation:spin 10s linear infinite;}
-  .orbit .dot{position:absolute;top:0;left:50%;width:6px;height:6px;margin-left:-3px;border-radius:50%;background:var(--cyan-bright);box-shadow:0 0 10px 2px var(--cyan-bright);}
-  @keyframes spin{from{transform:translate(-50%,-50%) rotate(0deg);}to{transform:translate(-50%,-50%) rotate(360deg);}}
-  @keyframes spin-rev{from{transform:translate(-50%,-50%) rotate(360deg);}to{transform:translate(-50%,-50%) rotate(0deg);}}
+  .corner-bracket{
+    position:absolute; width:28px; height:28px; z-index:5;
+    border:2px solid var(--cyan-dim);
+    opacity:0.8;
+  }
+  .cb-tl{ top:12px; left:12px; border-right:none; border-bottom:none; }
+  .cb-tr{ top:12px; right:12px; border-left:none; border-bottom:none; }
+  .cb-bl{ bottom:12px; left:12px; border-right:none; border-top:none; }
+  .cb-br{ bottom:12px; right:12px; border-left:none; border-top:none; }
 
-  svg.dash-circle{width:100%;height:100%;overflow:visible;}
-  svg.dash-circle circle{fill:none;stroke:var(--cyan);stroke-width:1.4;opacity:.55;}
-  .ring-mid-dash svg circle{stroke:var(--cyan-bright);opacity:.75;stroke-width:2;}
+  /* Audio Telemetry Spectrum */
+  .waveform{
+    display:flex; align-items:flex-end; gap:2.5px; height:32px; margin-top:8px;
+  }
+  .waveform .bar{
+    width:3px; background:var(--cyan);
+    height:4px; opacity:0.6;
+    transition:height 0.08s ease;
+    border-radius:1px;
+  }
 
-  .center-text{position:relative;z-index:4;text-align:center;width:70%;}
-  .title{font-family:'Orbitron',sans-serif;font-weight:900;font-size:clamp(18px,2.8vmin,28px);letter-spacing:6px;color:var(--cyan-bright);text-shadow:0 0 10px var(--cyan-glow),0 0 28px var(--cyan-glow);animation:pulse-glow 3.4s ease-in-out infinite;}
-  @keyframes pulse-glow{0%,100%{opacity:1;}50%{opacity:.8;}}
-  .subtitle{margin-top:8px;font-size:10px;letter-spacing:4px;color:var(--text-dim);transition:color .4s;min-height:14px;}
-  .subtitle.listening{color:var(--cyan-bright);animation:blink 1.2s ease-in-out infinite;}
-  .subtitle.speaking{color:var(--amber);}
-  @keyframes blink{0%,100%{opacity:1;}50%{opacity:.35;}}
-  .caption{margin-top:8px;font-size:10px;letter-spacing:1px;color:var(--cyan-bright);min-height:14px;max-width:96%;margin-left:auto;margin-right:auto;text-shadow:0 0 6px var(--cyan-glow);}
-  .hint{margin-top:14px;font-size:8px;letter-spacing:1.1px;color:rgba(95,146,168,.55);line-height:1.7;}
+  /* Holographic Arc Reactor Core */
+  .core{
+    position:relative;
+    width:min(60vmin, 400px);
+    height:min(60vmin, 400px);
+    display:flex; align-items:center; justify-content:center;
+  }
 
-  .hud-console{position:absolute;bottom:60px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:10px;z-index:6;max-width:94vw;width:580px;}
-  .input-bar{display:flex;width:100%;background:rgba(7,24,35,.75);border:1px solid var(--cyan-dim);box-shadow:0 0 15px rgba(0,0,0,.5);}
-  .input-bar input{flex:1;background:transparent;border:none;outline:none;color:var(--cyan-bright);font-family:'Share Tech Mono',monospace;font-size:12px;padding:8px 12px;letter-spacing:1px;user-select:text;}
-  .input-bar input::placeholder{color:rgba(95,146,168,.5);}
-  .input-bar button{background:rgba(79,216,255,.1);border:none;border-left:1px solid var(--cyan-dim);color:var(--cyan);font-family:'Share Tech Mono',monospace;font-size:11px;padding:0 14px;cursor:pointer;transition:.2s;}
-  .input-bar button:hover{background:var(--cyan-glow);color:#fff;}
+  .ring{
+    position:absolute;
+    border-radius:50%;
+    top:50%; left:50%;
+    pointer-events:none;
+  }
 
-  .controls{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;}
-  .hud-btn{background:rgba(79,216,255,.06);border:1px solid var(--cyan-dim);color:var(--cyan);font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:1.5px;padding:7px 14px;cursor:pointer;transition:all .2s;text-transform:uppercase;white-space:nowrap;}
-  .hud-btn:hover{background:rgba(79,216,255,.18);border-color:var(--cyan);box-shadow:0 0 14px var(--cyan-glow);}
-  .hud-btn:active{transform:scale(.97);}
-  .hud-btn.active{background:rgba(79,216,255,.25);color:var(--cyan-bright);box-shadow:0 0 18px var(--cyan-glow);}
-  .hud-btn.spotify-btn{border-color:rgba(29,185,84,.4);color:var(--spotify);}
-  .hud-btn.cal-btn{border-color:rgba(255,180,84,.4);color:var(--amber);}
-  .hud-btn.cal-btn.active{background:rgba(255,180,84,.2);box-shadow:0 0 14px rgba(255,180,84,.3);}
+  .ring-outer-dash{
+    width:100%; height:100%;
+    transform:translate(-50%,-50%);
+    animation: spin 50s linear infinite;
+  }
+  .ring-ticks{
+    width:88%; height:88%;
+    transform:translate(-50%,-50%);
+    animation: spin-rev 35s linear infinite;
+    background: repeating-conic-gradient(var(--cyan-dim) 0deg 1.5deg, transparent 1.5deg 8deg);
+    -webkit-mask: radial-gradient(circle, transparent 96%, black 97%, black 100%, transparent 100.5%);
+    mask: radial-gradient(circle, transparent 96%, black 97%, black 100%, transparent 100.5%);
+    opacity:0.8;
+  }
+  .ring-mid-dash{
+    width:74%; height:74%;
+    transform:translate(-50%,-50%);
+    animation: spin 24s linear infinite;
+  }
+  .ring-inner-thin{
+    width:58%; height:58%;
+    transform:translate(-50%,-50%);
+    border:1.5px solid rgba(79,216,255,0.3);
+    box-shadow: 0 0 15px var(--cyan-glow) inset;
+    transition: all 0.3s ease;
+  }
 
-  .footnote{position:absolute;bottom:14px;left:50%;transform:translateX(-50%);font-size:8.5px;letter-spacing:.8px;color:rgba(95,146,168,.5);text-align:center;width:90%;max-width:540px;z-index:5;}
+  .ring-inner-thin.pulse-listen{
+    animation: ring-pulse-cyan 1.4s ease-in-out infinite;
+    border-color: var(--cyan);
+  }
+  .ring-inner-thin.pulse-speak{
+    animation: ring-pulse-amber 1s ease-in-out infinite;
+    border-color: var(--amber);
+  }
+  @keyframes ring-pulse-cyan{
+    0%,100%{ box-shadow:0 0 12px var(--cyan-glow) inset, 0 0 0 transparent; }
+    50%{ box-shadow:0 0 28px var(--cyan-glow) inset, 0 0 28px var(--cyan); }
+  }
+  @keyframes ring-pulse-amber{
+    0%,100%{ box-shadow:0 0 12px rgba(255,180,84,0.15) inset, 0 0 0 transparent; }
+    50%{ box-shadow:0 0 32px rgba(255,180,84,0.5) inset, 0 0 30px var(--amber); }
+  }
 
-  .data-panel{position:absolute;top:50%;right:20px;transform:translateY(-50%) translateX(30px);width:310px;max-height:78vh;overflow-y:auto;background:var(--bg-panel);border:1px solid var(--cyan-dim);box-shadow:0 0 24px rgba(0,0,0,.8),0 0 12px var(--cyan-glow);padding:16px;z-index:6;opacity:0;pointer-events:none;transition:opacity .35s,transform .35s;}
-  .data-panel::-webkit-scrollbar{width:4px;}.data-panel::-webkit-scrollbar-track{background:transparent;}.data-panel::-webkit-scrollbar-thumb{background:var(--cyan-dim);border-radius:2px;}
-  .data-panel.visible{opacity:1;transform:translateY(-50%) translateX(0);pointer-events:auto;}
-  .panel-title{font-family:'Orbitron',sans-serif;font-size:12px;letter-spacing:2px;color:var(--cyan-bright);border-bottom:1px solid var(--cyan-dim);padding-bottom:6px;margin-bottom:10px;}
-  .panel-img{width:100%;max-height:140px;object-fit:cover;margin-bottom:10px;display:none;filter:saturate(.7) brightness(.95);border:1px solid var(--cyan-dim);}
-  .panel-text{font-size:11px;line-height:1.6;color:var(--text-dim);letter-spacing:.4px;white-space:pre-wrap;}
-  .panel-big-result{font-family:'Orbitron',sans-serif;font-size:24px;color:var(--cyan-bright);text-shadow:0 0 12px var(--cyan-glow);margin:6px 0;display:none;}
-  .panel-canvas{width:100%;height:auto;display:none;margin-top:8px;border:1px solid rgba(79,216,255,.2);}
+  .orbit{
+    width:100%; height:100%;
+    transform:translate(-50%,-50%);
+    animation: spin 12s linear infinite;
+  }
+  .orbit .dot{
+    position:absolute; top:0; left:50%;
+    width:8px; height:8px; margin-left:-4px;
+    border-radius:50%;
+    background:var(--cyan-bright);
+    box-shadow:0 0 12px 3px var(--cyan-bright);
+  }
 
-  .event-card{background:rgba(79,216,255,.06);border:1px solid var(--cyan-dim);border-left:3px solid var(--amber);padding:8px 10px;margin-bottom:6px;transition:.2s;}
-  .event-card:hover{border-left-color:var(--cyan-bright);background:rgba(79,216,255,.1);}
-  .event-card .ev-day{font-family:'Orbitron',sans-serif;font-size:9px;color:var(--amber);letter-spacing:2px;}
-  .event-card .ev-time{font-size:10px;color:var(--cyan);margin-top:2px;}
-  .event-card .ev-title{font-size:11px;color:var(--cyan-bright);margin-top:3px;}
-  .event-card .ev-desc{font-size:10px;color:var(--text-dim);margin-top:2px;}
-  .event-card.today{border-left-color:#ff5b5b;background:rgba(255,91,91,.08);}
-  .event-card.tomorrow{border-left-color:#06d6a0;background:rgba(6,214,160,.06);}
+  @keyframes spin{ from{ transform:translate(-50%,-50%) rotate(0deg);} to{ transform:translate(-50%,-50%) rotate(360deg);} }
+  @keyframes spin-rev{ from{ transform:translate(-50%,-50%) rotate(360deg);} to{ transform:translate(-50%,-50%) rotate(0deg);} }
 
-  .timer-card{background:rgba(79,216,255,.06);border:1px solid var(--cyan-dim);padding:8px 10px;margin-top:8px;display:flex;justify-content:space-between;align-items:center;}
-  .timer-val{font-family:'Orbitron',sans-serif;color:var(--amber);font-size:16px;}
+  svg.dash-circle{ width:100%; height:100%; overflow:visible; }
+  svg.dash-circle circle{
+    fill:none;
+    stroke:var(--cyan);
+    stroke-width:1.5;
+    opacity:0.5;
+  }
+  .ring-mid-dash svg circle{ stroke:var(--cyan-bright); opacity:0.7; stroke-width:2.2; }
 
-  .settings-modal{position:fixed;inset:0;background:rgba(2,5,8,.85);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;z-index:99;opacity:0;pointer-events:none;transition:opacity .3s;}
-  .settings-modal.active{opacity:1;pointer-events:auto;}
-  .settings-box{width:min(92vw,480px);max-height:85vh;overflow-y:auto;background:var(--bg-panel);border:1px solid var(--cyan);box-shadow:0 0 35px var(--cyan-glow);padding:22px;color:var(--cyan);}
-  .settings-box h2{font-family:'Orbitron',sans-serif;font-size:14px;letter-spacing:2px;border-bottom:1px solid var(--cyan-dim);padding-bottom:8px;margin-bottom:14px;color:var(--cyan-bright);}
-  .setting-group{margin-bottom:12px;}
-  .setting-group label{display:block;font-size:10px;letter-spacing:1px;color:var(--text-dim);margin-bottom:4px;}
-  .setting-group input,.setting-group select,.setting-group textarea{width:100%;background:rgba(3,8,13,.8);border:1px solid var(--cyan-dim);color:var(--cyan-bright);font-family:'Share Tech Mono',monospace;font-size:11px;padding:7px 10px;outline:none;user-select:text;}
-  .setting-group textarea{height:80px;resize:vertical;}
-  .setting-group input:focus,.setting-group textarea:focus{border-color:var(--cyan);}
-  .modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:18px;}
-  .settings-box .section-head{font-size:11px;color:var(--amber);letter-spacing:2px;margin:16px 0 8px;border-bottom:1px solid rgba(255,180,84,.2);padding-bottom:4px;}
+  .center-text{
+    position:relative; z-index:4;
+    text-align:center;
+    width:70%;
+  }
+  .title{
+    font-family:'Orbitron', sans-serif;
+    font-weight:900;
+    font-size:clamp(18px, 3vmin, 30px);
+    letter-spacing:7px;
+    color:var(--cyan-bright);
+    text-shadow: 0 0 12px var(--cyan-glow), 0 0 28px var(--cyan-glow);
+    animation: pulse-glow 3.5s ease-in-out infinite;
+  }
+  @keyframes pulse-glow{ 0%,100%{ opacity:1; } 50%{ opacity:0.75; } }
+  
+  .subtitle{
+    margin-top:8px;
+    font-size:10px;
+    letter-spacing:5px;
+    color:var(--text-dim);
+    transition: color 0.4s;
+    min-height:14px;
+  }
+  .subtitle.listening{ color:var(--cyan-bright); animation: blink 1.2s ease-in-out infinite; }
+  .subtitle.speaking{ color:var(--amber); }
+  @keyframes blink{ 0%,100%{opacity:1;} 50%{opacity:0.35;} }
 
-  @media(max-width:768px){
-    .data-panel{right:50%;top:auto;bottom:165px;transform:translateX(50%) translateY(20px);width:90%;max-width:340px;}
-    .data-panel.visible{transform:translateX(50%) translateY(0);}
-    .corner.top-left{top:12px;left:12px;font-size:9px;}.corner.top-right{top:12px;right:12px;font-size:9px;}
-    .hud-console{bottom:50px;width:95%;}
-    .controls{gap:5px;}.hud-btn{font-size:9px;padding:6px 10px;}
+  .caption{
+    margin-top:10px;
+    font-size:10.5px;
+    letter-spacing:1px;
+    color:var(--cyan-bright);
+    min-height:14px;
+    max-width:96%;
+    margin-left:auto; margin-right:auto;
+    text-shadow: 0 0 8px var(--cyan-glow);
+    font-weight:bold;
+  }
+
+  .hint{
+    margin-top:16px;
+    font-size:8px;
+    letter-spacing:1px;
+    color:rgba(95,146,168,0.5);
+    line-height:1.7;
+  }
+
+  /* HUD Lower Console Input */
+  .hud-console{
+    position:absolute;
+    bottom:60px;
+    left:50%;
+    transform:translateX(-50%);
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:10px;
+    z-index:6;
+    max-width:94vw;
+    width:580px;
+  }
+
+  .input-bar{
+    display:flex;
+    width:100%;
+    background:rgba(3, 11, 19, 0.85);
+    border:1.5px solid var(--cyan-dim);
+    box-shadow:0 0 20px rgba(0,0,0,0.6);
+  }
+  .input-bar input{
+    flex:1;
+    background:transparent;
+    border:none;
+    outline:none;
+    color:var(--cyan-bright);
+    font-family:'Share Tech Mono', monospace;
+    font-size:13px;
+    padding:10px 14px;
+    letter-spacing:1px;
+  }
+  .input-bar input::placeholder{ color:rgba(95,146,168,0.45); }
+  .input-bar button{
+    background:rgba(79,216,255,0.1);
+    border:none;
+    border-left:1.5px solid var(--cyan-dim);
+    color:var(--cyan);
+    font-family:'Share Tech Mono', monospace;
+    font-size:11px;
+    padding:0 18px;
+    cursor:pointer;
+    transition:0.2s;
+    font-weight:bold;
+  }
+  .input-bar button:hover{ background:var(--cyan-glow); color:#fff; }
+
+  .controls{
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+    justify-content:center;
+  }
+  .hud-btn{
+    background:rgba(79,216,255,0.05);
+    border:1.5px solid var(--cyan-dim);
+    color:var(--cyan);
+    font-family:'Share Tech Mono', monospace;
+    font-size:10px;
+    letter-spacing:1.5px;
+    padding:8px 16px;
+    cursor:pointer;
+    transition: all 0.2s;
+    text-transform:uppercase;
+    white-space:nowrap;
+  }
+  .hud-btn:hover{
+    background:rgba(79,216,255,0.15);
+    border-color:var(--cyan);
+    box-shadow:0 0 12px var(--cyan-glow);
+  }
+  .hud-btn:active{ transform:scale(0.97); }
+  .hud-btn.active{
+    background:var(--cyan-glow);
+    color:var(--cyan-bright);
+    box-shadow:0 0 16px var(--cyan-glow);
+  }
+  .hud-btn.spotify-btn{ border-color:rgba(29,185,84,0.35); color:var(--spotify); }
+  .hud-btn.spotify-btn.active{ background:rgba(29,185,84,0.2); }
+  .hud-btn.cal-btn{ border-color:rgba(255,180,84,0.35); color:var(--amber); }
+  .hud-btn.cal-btn.active{ background:rgba(255,180,84,0.15); }
+
+  .footnote{
+    position:absolute;
+    bottom:14px;
+    left:50%;
+    transform:translateX(-50%);
+    font-size:8.5px;
+    letter-spacing:1px;
+    color:rgba(95,146,168,0.45);
+    text-align:center;
+    width:90%;
+    max-width:540px;
+    z-index:5;
+  }
+
+  /* Robust Sidebar Telemetry Panel */
+  .data-panel{
+    position:absolute;
+    top:50%;
+    right:24px;
+    transform:translateY(-50%) translateX(30px);
+    width:320px;
+    max-height:80vh;
+    overflow-y:auto;
+    background:var(--bg-panel);
+    border:1.5px solid var(--cyan-dim);
+    box-shadow:0 0 30px rgba(0,0,0,0.8), 0 0 15px var(--cyan-glow);
+    padding:18px;
+    z-index:6;
+    opacity:0;
+    pointer-events:none;
+    transition: opacity 0.3s, transform 0.3s;
+  }
+  .data-panel::-webkit-scrollbar{ width:4px; }
+  .data-panel::-webkit-scrollbar-track{ background:transparent; }
+  .data-panel::-webkit-scrollbar-thumb{ background:var(--cyan-dim); border-radius:2px; }
+  
+  .data-panel.visible{
+    opacity:1;
+    transform:translateY(-50%) translateX(0);
+    pointer-events:auto;
+  }
+  .panel-title{
+    font-family:'Orbitron', sans-serif;
+    font-size:12px;
+    letter-spacing:2px;
+    color:var(--cyan-bright);
+    border-bottom:1.5px solid var(--cyan-dim);
+    padding-bottom:8px;
+    margin-bottom:12px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+  }
+  .panel-img{
+    width:100%;
+    max-height:140px;
+    object-fit:cover;
+    margin-bottom:12px;
+    display:none;
+    filter:saturate(0.7) brightness(0.9);
+    border:1px solid var(--cyan-dim);
+  }
+  .panel-text{
+    font-size:11.5px;
+    line-height:1.6;
+    color:var(--text-dim);
+    letter-spacing:0.4px;
+    white-space:pre-wrap;
+  }
+  .panel-big-result{
+    font-family:'Orbitron', sans-serif;
+    font-size:26px;
+    color:var(--cyan-bright);
+    text-shadow:0 0 15px var(--cyan-glow);
+    margin:8px 0;
+    display:none;
+  }
+  .panel-canvas{
+    width:100%;
+    height:auto;
+    display:none;
+    margin-top:10px;
+    border:1px solid rgba(79,216,255,0.15);
+  }
+
+  /* Schedule Cards */
+  .event-card{
+    background:rgba(79,216,255,0.04);
+    border:1.5px solid var(--cyan-dim);
+    border-left:4px solid var(--amber);
+    padding:10px 12px;
+    margin-bottom:8px;
+    position:relative;
+  }
+  .event-card .ev-header{
+    display:flex;
+    justify-content:space-between;
+    font-size:9px;
+    color:var(--amber);
+    letter-spacing:1px;
+    font-family:'Orbitron', sans-serif;
+  }
+  .event-card .ev-title{
+    font-size:12px;
+    color:var(--cyan-bright);
+    margin-top:4px;
+    font-weight:bold;
+  }
+  .event-card .ev-desc{
+    font-size:10px;
+    color:var(--text-dim);
+    margin-top:3px;
+  }
+  .event-card .ev-del{
+    position:absolute;
+    right:8px;
+    bottom:8px;
+    background:transparent;
+    border:none;
+    color:var(--danger);
+    cursor:pointer;
+    font-size:9px;
+    letter-spacing:1px;
+  }
+  .event-card .ev-del:hover{ text-decoration:underline; }
+
+  /* Interactive Scheduler Widget */
+  .cal-adder{
+    margin-top:14px;
+    border-top:1.5px solid var(--cyan-dim);
+    padding-top:12px;
+  }
+  .cal-adder-title{
+    font-size:10px;
+    color:var(--cyan);
+    margin-bottom:8px;
+    letter-spacing:1.5px;
+    text-transform:uppercase;
+  }
+  .cal-input{
+    width:100%;
+    background:rgba(2,6,10,0.85);
+    border:1px solid var(--cyan-dim);
+    color:#fff;
+    font-family:'Share Tech Mono', monospace;
+    font-size:11px;
+    padding:6px;
+    margin-bottom:6px;
+    outline:none;
+  }
+  .cal-input:focus{ border-color:var(--cyan); }
+  .cal-row{ display:flex; gap:6px; }
+
+  .timer-card{
+    background:rgba(79,216,255,0.05);
+    border:1px solid var(--cyan-dim);
+    padding:10px;
+    margin-top:8px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+  }
+  .timer-val{ font-family:'Orbitron', sans-serif; color:var(--amber); font-size:16px; }
+
+  /* Unified Settings Modal */
+  .settings-modal{
+    position:fixed;
+    inset:0;
+    background:rgba(2,5,8,0.88);
+    backdrop-filter:blur(8px);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    z-index:99;
+    opacity:0;
+    pointer-events:none;
+    transition: opacity 0.3s ease;
+  }
+  .settings-modal.active{
+    opacity:1;
+    pointer-events:auto;
+  }
+  .settings-box{
+    width:min(94vw, 480px);
+    max-height:85vh;
+    overflow-y:auto;
+    background:var(--bg-panel);
+    border:1.5px solid var(--cyan);
+    box-shadow:0 0 35px var(--cyan-glow);
+    padding:24px;
+    color:var(--cyan);
+  }
+  .settings-box::-webkit-scrollbar{ width:4px; }
+  .settings-box::-webkit-scrollbar-thumb{ background:var(--cyan); border-radius:2px; }
+  .settings-box h2{
+    font-family:'Orbitron', sans-serif;
+    font-size:15px;
+    letter-spacing:2px;
+    border-bottom:1.5px solid var(--cyan-dim);
+    padding-bottom:10px;
+    margin-bottom:16px;
+    color:var(--cyan-bright);
+  }
+  .setting-group{ margin-bottom:14px; }
+  .setting-group label{
+    display:block;
+    font-size:10px;
+    letter-spacing:1px;
+    color:var(--text-dim);
+    margin-bottom:4px;
+  }
+  .setting-group input, .setting-group select, .setting-group textarea{
+    width:100%;
+    background:rgba(2,6,10,0.9);
+    border:1.5px solid var(--cyan-dim);
+    color:var(--cyan-bright);
+    font-family:'Share Tech Mono', monospace;
+    font-size:12px;
+    padding:8px 12px;
+    outline:none;
+  }
+  .setting-group input:focus, .setting-group textarea:focus{ border-color:var(--cyan); }
+  .modal-actions{
+    display:flex;
+    justify-content:flex-end;
+    gap:10px;
+    margin-top:20px;
+  }
+  .settings-box .section-heading{
+    font-size:11px;
+    color:var(--amber);
+    letter-spacing:2px;
+    margin:18px 0 8px;
+    border-bottom:1px solid rgba(255,180,84,0.25);
+    padding-bottom:4px;
+  }
+
+  @media (max-width: 768px){
+    .data-panel{
+      right:50%;
+      top:auto;
+      bottom:170px;
+      transform:translateX(50%) translateY(20px);
+      width:92%;
+      max-width:340px;
+    }
+    .data-panel.visible{ transform:translateX(50%) translateY(0); }
+    .corner.top-left{ top:14px; left:14px; font-size:9px; }
+    .corner.top-right{ top:14px; right:14px; font-size:9px; }
+    .hud-console{ bottom:50px; width:94%; }
+    .hud-btn{ font-size:9px; padding:7px 11px; }
   }
 </style>
 </head>
 <body data-theme="classic">
 
-<div class="grid-overlay"></div>
-<div class="scanline"></div>
-<div class="corner-bracket cb-tl"></div>
-<div class="corner-bracket cb-tr"></div>
-<div class="corner-bracket cb-bl"></div>
-<div class="corner-bracket cb-br"></div>
+  <div class="grid-overlay"></div>
+  <div class="scanline"></div>
 
-<div class="corner top-left">
-  SYSTEM STATUS<br><span id="sysStatus">ALL SYSTEMS NOMINAL</span><br>
-  PLANNER LINK: <span id="plannerStatus">SCANNING...</span>
-</div>
-<div class="corner top-right">
-  LOCAL TIME<br><span id="clock">--:--:--</span><br>
-  <span id="dateDisplay">--</span><br>
-  <span id="weatherBadge">ATMOS: SCANNING...</span>
-</div>
-<div class="corner bottom-left">
-  AUDIO TELEMETRY
-  <div class="waveform" id="waveform"></div>
-</div>
-<div class="corner bottom-right">
-  VOICE: <span id="voiceStatus">INITIALIZING</span><br>
-  AI CORE: <span id="aiStatus">BUILT-IN</span><br>
-  SPOTIFY: <span id="spotifyStatus">DISCONNECTED</span>
-</div>
+  <div class="corner-bracket cb-tl"></div>
+  <div class="corner-bracket cb-tr"></div>
+  <div class="corner-bracket cb-bl"></div>
+  <div class="corner-bracket cb-br"></div>
 
-<div class="core">
-  <div class="ring ring-outer-dash"><svg class="dash-circle" viewBox="0 0 100 100"><circle cx="50" cy="50" r="49" stroke-dasharray="1.2 4"/></svg></div>
-  <div class="ring ring-ticks"></div>
-  <div class="ring ring-mid-dash"><svg class="dash-circle" viewBox="0 0 100 100"><circle cx="50" cy="50" r="48" stroke-dasharray="18 6 4 6"/></svg></div>
-  <div class="ring ring-inner-thin" id="innerRing"></div>
-  <div class="ring orbit"><div class="dot"></div></div>
-  <div class="center-text">
-    <div class="title">J.A.R.V.I.S.</div>
-    <div class="subtitle" id="statusText">STANDBY</div>
-    <div class="caption" id="caption"></div>
-    <div class="hint">
-      &ldquo;WHAT'S ON MY SCHEDULE&rdquo; &middot; &ldquo;ADD EVENT FRIDAY 2PM MEETING&rdquo;<br>
-      &ldquo;WHAT'S TOMORROW&rdquo; &middot; &ldquo;CLEAR ALL EVENTS&rdquo; &middot; &ldquo;WEATHER IN TOKYO&rdquo;
+  <!-- Telemetry Interfaces -->
+  <div class="corner top-left">
+    SYSTEM STATUS<br><span id="sysStatus">ALL SYSTEMS NOMINAL</span><br>
+    PLANNER CORE: <span id="plannerStatus">SCANNING...</span>
+  </div>
+  <div class="corner top-right">
+    LOCAL TIME<br><span id="clock">--:--:--</span><br>
+    <span id="dateStr">--/--/----</span><br>
+    <span id="weatherBadge">ATMOSPHERE: INITIALIZING</span>
+  </div>
+  <div class="corner bottom-left">
+    AUDIO TRANSMISSION
+    <div class="waveform" id="waveform"></div>
+  </div>
+  <div class="corner bottom-right">
+    VOICE MODULE: <span id="voiceStatus">READY</span><br>
+    AI ENGINE: <span id="aiStatus">BUILT-IN</span><br>
+    SPOTIFY SYNC: <span id="spotifyStatus">DISCONNECTED</span>
+  </div>
+
+  <!-- Interactive Arc Reactor Core -->
+  <div class="core">
+    <div class="ring ring-outer-dash">
+      <svg class="dash-circle" viewBox="0 0 100 100">
+        <circle cx="50" cy="50" r="49" stroke-dasharray="1.5 5" />
+      </svg>
+    </div>
+    <div class="ring ring-ticks"></div>
+    <div class="ring ring-mid-dash">
+      <svg class="dash-circle" viewBox="0 0 100 100">
+        <circle cx="50" cy="50" r="47" stroke-dasharray="20 6 5 6" />
+      </svg>
+    </div>
+    <div class="ring ring-inner-thin" id="innerRing"></div>
+    <div class="ring orbit"><div class="dot"></div></div>
+
+    <div class="center-text">
+      <div class="title">J.A.R.V.I.S.</div>
+      <div class="subtitle" id="statusText">STANDBY</div>
+      <div class="caption" id="caption"></div>
+      <div class="hint">
+        &ldquo;WHAT'S ON MY SCHEDULE?&rdquo; &middot; &ldquo;ADD EVENT FRIDAY 3PM MEETING&rdquo;<br>
+        &ldquo;CONVERT 15 GALLONS TO LITERS&rdquo; &middot; &ldquo;GRAPH COS(X)*1.5&rdquo;
+      </div>
     </div>
   </div>
-</div>
 
-<div class="data-panel" id="dataPanel">
-  <div class="panel-title" id="panelTitle">TELEMETRY</div>
-  <img class="panel-img" id="panelImg" alt="">
-  <div class="panel-big-result" id="panelBig"></div>
-  <canvas class="panel-canvas" id="panelCanvas" width="500" height="300"></canvas>
-  <div class="panel-text" id="panelText"></div>
-  <div id="eventsContainer"></div>
-  <div id="timersList"></div>
-</div>
+  <!-- Sliding Data Telemetry Drawer -->
+  <div class="data-panel" id="dataPanel">
+    <div class="panel-title" id="panelTitle">TELEMETRY</div>
+    <img class="panel-img" id="panelImg" alt="">
+    <div class="panel-big-result" id="panelBig"></div>
+    <canvas class="panel-canvas" id="panelCanvas" width="500" height="300"></canvas>
+    <div class="panel-text" id="panelText"></div>
+    
+    <div id="calendarArea">
+      <div id="eventsContainer"></div>
+      <div class="cal-adder">
+        <div class="cal-adder-title">Schedule New Event</div>
+        <input type="text" class="cal-input" id="addEvTitle" placeholder="Event Title">
+        <div class="cal-row">
+          <select class="cal-input" id="addEvDay">
+            <option value="Monday">Monday</option>
+            <option value="Tuesday">Tuesday</option>
+            <option value="Wednesday">Wednesday</option>
+            <option value="Thursday">Thursday</option>
+            <option value="Friday">Friday</option>
+            <option value="Saturday">Saturday</option>
+            <option value="Sunday">Sunday</option>
+          </select>
+          <input type="text" class="cal-input" id="addEvTime" placeholder="e.g. 14:00">
+        </div>
+        <button class="hud-btn" style="width:100%; padding:5px; font-size:9px;" id="addEvSubmit">Deploy Event</button>
+      </div>
+    </div>
+    <div id="timersList"></div>
+  </div>
 
-<div class="hud-console">
-  <div class="input-bar">
-    <input type="text" id="textInput" placeholder="TYPE COMMAND OR SAY &quot;HEY JARVIS&quot;..." autocomplete="off">
-    <button id="sendBtn">EXEC</button>
+  <!-- Footer Controls -->
+  <div class="hud-console">
+    <div class="input-bar">
+      <input type="text" id="textInput" placeholder="INPUT QUANTUM QUERY OR SPEAK..." autocomplete="off">
+      <button id="sendBtn">EXECUTE</button>
+    </div>
+    <div class="controls">
+      <button class="hud-btn" id="activateBtn">Activate Voice</button>
+      <button class="hud-btn" id="testBtn">Test Greeting</button>
+      <button class="hud-btn cal-btn" id="calendarBtn">📅 View Calendar</button>
+      <button class="hud-btn cal-btn" id="syncBtn">🔄 Sync Planner</button>
+      <button class="hud-btn spotify-btn" id="spotifyBtn">Spotify Link</button>
+      <button class="hud-btn" id="settingsBtn">⚙ HUD Config</button>
+    </div>
   </div>
-  <div class="controls">
-    <button class="hud-btn" id="activateBtn">Activate Voice</button>
-    <button class="hud-btn" id="testBtn">Test</button>
-    <button class="hud-btn cal-btn" id="calendarBtn">📅 Schedule</button>
-    <button class="hud-btn cal-btn" id="syncBtn">🔄 Sync Planner</button>
-    <button class="hud-btn spotify-btn" id="spotifyBtn">Spotify</button>
-    <button class="hud-btn" id="settingsBtn">⚙ Config</button>
-  </div>
-</div>
 
-<div class="footnote" id="footnote">J.A.R.V.I.S. Mark-V • Planner Bridge: kraftalver-png.github.io/ukel-nn</div>
+  <div class="footnote" id="footnote">
+    J.A.R.V.I.S. Core Matrix Online. Syncing with kraftalver-png.github.io/ukel-nn
+  </div>
 
-<!-- Hidden iframe for planner bridge -->
-<iframe id="plannerFrame" src="https://kraftalver-png.github.io/ukel-nn/" style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;top:-100px;" sandbox="allow-scripts allow-same-origin"></iframe>
+  <!-- Hidden Sync Bridge Frame -->
+  <iframe id="plannerFrame" src="https://kraftalver-png.github.io/ukel-nn/" style="position:absolute;width:1px;height:1px;opacity:0;top:-100px;" sandbox="allow-scripts allow-same-origin"></iframe>
 
-<!-- Settings Modal -->
-<div class="settings-modal" id="settingsModal">
-<div class="settings-box">
-  <h2>// J.A.R.V.I.S. CONFIGURATION</h2>
-  <div class="setting-group"><label>HUD THEME</label>
-    <select id="themeSelect"><option value="classic">Mark-V Classic (Cyan)</option><option value="gold">Arc Gold</option><option value="emerald">Stealth Emerald</option><option value="crimson">Hulkbuster Crimson</option></select>
+  <!-- Configurations Panel Drawer -->
+  <div class="settings-modal" id="settingsModal">
+    <div class="settings-box">
+      <h2>// SYSTEM PREFERENCES & PARAMETERS</h2>
+      <div class="setting-group">
+        <label>HUD CHROMATIC THEME</label>
+        <select id="themeSelect">
+          <option value="classic">Mark-VI Classic (Cyan)</option>
+          <option value="gold">Arc Reactor (Gold)</option>
+          <option value="emerald">Stealth Operative (Emerald)</option>
+          <option value="crimson">Hulkbuster (Crimson)</option>
+        </select>
+      </div>
+      <div class="setting-group">
+        <label>LOCAL SPEECH SYNTHESIS ENGINE</label>
+        <select id="voiceSelect"></select>
+      </div>
+      <div class="setting-group">
+        <label>SPEECH SPEED RATE (0.7 – 1.3)</label>
+        <input type="number" id="cfgRate" min="0.7" max="1.3" step="0.05" value="0.95">
+      </div>
+      <div class="setting-group">
+        <label>SPEECH FREQUENCY PITCH (0.5 – 1.5)</label>
+        <input type="number" id="cfgPitch" min="0.5" max="1.5" step="0.05" value="0.88">
+      </div>
+      
+      <div class="section-heading">INTELLIGENCE PLANNERS & BRIDGES</div>
+      <div class="setting-group">
+        <label>WEEK PLANNER ACCESSIBILITY URL</label>
+        <input type="text" id="cfgPlannerUrl" placeholder="https://kraftalver-png.github.io/ukel-nn/">
+      </div>
+
+      <div class="section-heading">EXTERNAL API HOOKS (OPTIONAL)</div>
+      <div class="setting-group">
+        <label>OPENAI / GROQ COMPATIBLE API KEY</label>
+        <input type="password" id="cfgLlmKey" placeholder="sk-...">
+      </div>
+      <div class="setting-group">
+        <label>COMPATIBLE BASE ENDPOINT URL</label>
+        <input type="text" id="cfgLlmUrl" value="https://api.openai.com/v1/chat/completions">
+      </div>
+      <div class="setting-group">
+        <label>ELEVENLABS APPARATUS API KEY</label>
+        <input type="password" id="cfgElevenKey" placeholder="xi-api-key">
+      </div>
+      <div class="setting-group">
+        <label>SPOTIFY DEVELOPMENT CLIENT ID</label>
+        <input type="text" id="cfgSpotifyId">
+      </div>
+      <div class="setting-group">
+        <label>PROCEDURAL AUDIO EMITTERS</label>
+        <select id="cfgSoundFx">
+          <option value="true">ENABLED</option>
+          <option value="false">MUTED</option>
+        </select>
+      </div>
+      <div class="modal-actions">
+        <button class="hud-btn" id="saveConfigBtn">SAVE & DEPLOY</button>
+        <button class="hud-btn" id="closeConfigBtn">CANCEL</button>
+      </div>
+    </div>
   </div>
-  <div class="setting-group"><label>VOICE STYLE</label>
-    <select id="voiceSelect"></select>
-  </div>
-  <div class="setting-group"><label>VOICE PITCH (0.5 – 1.5)</label>
-    <input type="number" id="cfgPitch" min="0.5" max="1.5" step="0.05" value="0.9">
-  </div>
-  <div class="setting-group"><label>VOICE SPEED (0.7 – 1.3)</label>
-    <input type="number" id="cfgRate" min="0.7" max="1.3" step="0.05" value="0.95">
-  </div>
-  <div class="section-head">PLANNER INTEGRATION</div>
-  <div class="setting-group"><label>PLANNER URL (YOUR UKEL-NN WEEK PLANNER)</label>
-    <input type="text" id="cfgPlannerUrl" placeholder="https://kraftalver-png.github.io/ukel-nn/">
-  </div>
-  <div class="setting-group"><label>MANUAL EVENTS (JSON BACKUP — AUTO-SAVED)</label>
-    <textarea id="cfgEventsJson" placeholder='[{"day":"Monday","time":"09:00","title":"Team Standup","desc":"Weekly sync"}]'></textarea>
-  </div>
-  <div class="section-head">API KEYS (OPTIONAL)</div>
-  <div class="setting-group"><label>OPENAI / GROQ LLM API KEY</label><input type="password" id="cfgLlmKey" placeholder="sk-..."></div>
-  <div class="setting-group"><label>LLM ENDPOINT URL</label><input type="text" id="cfgLlmUrl" placeholder="https://api.openai.com/v1/chat/completions"></div>
-  <div class="setting-group"><label>ELEVENLABS API KEY</label><input type="password" id="cfgElevenKey"></div>
-  <div class="setting-group"><label>SPOTIFY CLIENT ID</label><input type="text" id="cfgSpotifyId"></div>
-  <div class="setting-group"><label>SOUND EFFECTS</label>
-    <select id="cfgSoundFx"><option value="true">ENABLED</option><option value="false">MUTED</option></select>
-  </div>
-  <div class="modal-actions">
-    <button class="hud-btn" id="saveConfigBtn">SAVE & DEPLOY</button>
-    <button class="hud-btn" id="closeConfigBtn">CANCEL</button>
-  </div>
-</div>
-</div>
 
 <script>
-// ===================================================================
-// CONFIGURATION
-// ===================================================================
-const DEFAULT_CONFIG = {
-  ELEVEN_LABS_API_KEY:"",ELEVEN_LABS_VOICE_ID:"612b878b113047d9a770c069c8b4fdfe",
-  ELEVEN_LABS_MODEL:"eleven_turbo_v2",SPOTIFY_CLIENT_ID:"",
-  LLM_API_KEY:"",LLM_API_URL:"https://api.openai.com/v1/chat/completions",LLM_MODEL:"gpt-3.5-turbo",
-  SOUND_FX:true,THEME:"classic",
-  PLANNER_URL:"https://kraftalver-png.github.io/ukel-nn/",
-  VOICE_NAME:"",VOICE_PITCH:0.9,VOICE_RATE:0.95
-};
-let CONFIG={...DEFAULT_CONFIG};
-try{const s=localStorage.getItem('jarvis_config_v5');if(s)CONFIG={...CONFIG,...JSON.parse(s)};}catch(e){}
-function saveConfig(){localStorage.setItem('jarvis_config_v5',JSON.stringify(CONFIG));}
+  // =========================================================
+  // APP CONFIGURATION MATRIX
+  // =========================================================
+  const DEFAULT_CONFIG = {
+    ELEVEN_LABS_API_KEY: "",
+    ELEVEN_LABS_VOICE_ID: "612b878b113047d9a770c069c8b4fdfe",
+    ELEVEN_LABS_MODEL: "eleven_turbo_v2",
+    SPOTIFY_CLIENT_ID: "a0875a2703aa404a9e34b2dca5ce7415",
+    LLM_API_KEY: "",
+    LLM_API_URL: "https://api.openai.com/v1/chat/completions",
+    LLM_MODEL: "gpt-3.5-turbo",
+    SOUND_FX: true,
+    THEME: "classic",
+    PLANNER_URL: "https://kraftalver-png.github.io/ukel-nn/",
+    VOICE_NAME: "",
+    VOICE_PITCH: 0.88,
+    VOICE_RATE: 0.95
+  };
 
-const SPOTIFY_REDIRECT_URI=location.origin+location.pathname;
-const SPOTIFY_SCOPES="user-read-playback-state user-modify-playback-state user-read-currently-playing";
+  let CONFIG = { ...DEFAULT_CONFIG };
+  try{
+    const saved = localStorage.getItem('jarvis_config_v6');
+    if(saved) CONFIG = { ...CONFIG, ...JSON.parse(saved) };
+  }catch(e){}
 
-// ===================================================================
-// PROCEDURAL SOUND FX
-// ===================================================================
-let fxCtx=null;
-function getFxCtx(){if(!fxCtx)fxCtx=new(window.AudioContext||window.webkitAudioContext)();if(fxCtx.state==='suspended')fxCtx.resume();return fxCtx;}
-const SFX={
-  beep(f=880,d=.08,t='sine'){if(!CONFIG.SOUND_FX)return;try{const c=getFxCtx(),o=c.createOscillator(),g=c.createGain();o.type=t;o.frequency.setValueAtTime(f,c.currentTime);g.gain.setValueAtTime(.07,c.currentTime);g.gain.exponentialRampToValueAtTime(.001,c.currentTime+d);o.connect(g);g.connect(c.destination);o.start();o.stop(c.currentTime+d);}catch(e){}},
-  chime(){if(!CONFIG.SOUND_FX)return;[523,659,784,1047].forEach((f,i)=>setTimeout(()=>this.beep(f,.12),i*60));},
-  alarm(){if(!CONFIG.SOUND_FX)return;for(let i=0;i<3;i++)setTimeout(()=>{this.beep(988,.15,'square');setTimeout(()=>this.beep(1319,.2,'sine'),150);},i*400);}
-};
+  const SPOTIFY_REDIRECT_URI = window.location.origin + window.location.pathname;
+  const SPOTIFY_SCOPES = "user-read-playback-state user-modify-playback-state user-read-currently-playing";
 
-// ===================================================================
-// DOM ELEMENTS
-// ===================================================================
-const $=id=>document.getElementById(id);
-const statusText=$('statusText'),captionEl=$('caption'),voiceStatus=$('voiceStatus'),
-  aiStatus=$('aiStatus'),spotifyStatusEl=$('spotifyStatus'),plannerStatusEl=$('plannerStatus'),
-  activateBtn=$('activateBtn'),testBtn=$('testBtn'),spotifyBtn=$('spotifyBtn'),
-  calendarBtn=$('calendarBtn'),syncBtn=$('syncBtn'),settingsBtn=$('settingsBtn'),
-  waveformEl=$('waveform'),innerRing=$('innerRing'),footnote=$('footnote'),
-  textInput=$('textInput'),sendBtn=$('sendBtn'),weatherBadge=$('weatherBadge'),
-  dateDisplay=$('dateDisplay'),
-  dataPanel=$('dataPanel'),panelTitle=$('panelTitle'),panelImg=$('panelImg'),
-  panelText=$('panelText'),panelBig=$('panelBig'),panelCanvas=$('panelCanvas'),
-  eventsContainer=$('eventsContainer'),timersList=$('timersList'),
-  plannerFrame=$('plannerFrame');
-
-const BAR_COUNT=20;
-for(let i=0;i<BAR_COUNT;i++){const b=document.createElement('div');b.className='bar';waveformEl.appendChild(b);}
-const bars=waveformEl.querySelectorAll('.bar');
-
-// ===================================================================
-// CLOCK & DATE
-// ===================================================================
-function updateClock(){
-  const now=new Date();
-  $('clock').textContent=now.toLocaleTimeString('en-US',{hour12:false});
-  dateDisplay.textContent=now.toLocaleDateString('en-US',{weekday:'long',month:'short',day:'numeric',year:'numeric'});
-}
-setInterval(updateClock,1000);updateClock();
-
-const sysStatusEl=$('sysStatus');
-const sysMsg=["ALL SYSTEMS NOMINAL","ARC REACTOR STABLE","DEFENSE PROTOCOLS STANDBY","PLANNER BRIDGE ACTIVE"];
-let sysIdx=0;setInterval(()=>{sysIdx=(sysIdx+1)%sysMsg.length;sysStatusEl.textContent=sysMsg[sysIdx];},6000);
-
-// ===================================================================
-// STATUS & PANEL HELPERS
-// ===================================================================
-function setStatus(m){
-  statusText.classList.remove('listening','speaking');
-  innerRing.classList.remove('pulse-listen','pulse-speak');
-  if(m==='listening'){statusText.textContent='LISTENING...';statusText.classList.add('listening');innerRing.classList.add('pulse-listen');}
-  else if(m==='speaking'){statusText.textContent='SPEAKING...';statusText.classList.add('speaking');innerRing.classList.add('pulse-speak');}
-  else{statusText.textContent='STANDBY';}
-}
-
-let panelHideTimer=null;
-function showPanel(){clearTimeout(panelHideTimer);dataPanel.classList.add('visible');}
-function autoHidePanel(d=22000){clearTimeout(panelHideTimer);panelHideTimer=setTimeout(()=>dataPanel.classList.remove('visible'),d);}
-function resetPanel(){panelImg.style.display='none';panelBig.style.display='none';panelCanvas.style.display='none';panelText.textContent='';eventsContainer.innerHTML='';}
-
-// ===================================================================
-// VOICE ENGINE — NATURAL HUMAN VOICE SELECTION
-// ===================================================================
-let allVoices=[];
-function loadVoices(){
-  allVoices=speechSynthesis.getVoices();
-  populateVoiceSelect();
-}
-if('speechSynthesis' in window){
-  speechSynthesis.onvoiceschanged=loadVoices;
-  loadVoices();
-}
-
-function populateVoiceSelect(){
-  const sel=$('voiceSelect');
-  sel.innerHTML='<option value="">AUTO (BEST AVAILABLE)</option>';
-  // Sort: prioritize natural/premium voices
-  const sorted=[...allVoices].sort((a,b)=>{
-    const aScore=(/natural|neural|premium|enhanced|online/i.test(a.name)?1000:0)+(/en/i.test(a.lang)?100:0)+(/male/i.test(a.name)?10:0);
-    const bScore=(/natural|neural|premium|enhanced|online/i.test(b.name)?1000:0)+(/en/i.test(b.lang)?100:0)+(/male/i.test(b.name)?10:0);
-    return bScore-aScore;
-  });
-  sorted.forEach(v=>{
-    const opt=document.createElement('option');
-    opt.value=v.name;
-    const tags=[];
-    if(/natural|neural|premium|enhanced/i.test(v.name))tags.push('★ HD');
-    if(/online/i.test(v.name))tags.push('CLOUD');
-    opt.textContent=`${v.name} [${v.lang}]${tags.length?' '+tags.join(' '):''}`;
-    sel.appendChild(opt);
-  });
-  if(CONFIG.VOICE_NAME)sel.value=CONFIG.VOICE_NAME;
-}
-
-function pickBestVoice(){
-  if(!allVoices.length)allVoices=speechSynthesis.getVoices();
-  // If user selected a specific voice
-  if(CONFIG.VOICE_NAME){
-    const found=allVoices.find(v=>v.name===CONFIG.VOICE_NAME);
-    if(found)return found;
+  // =========================================================
+  // ZERO-ASSET PROCEDURAL ACOUSTICS (WEB AUDIO API)
+  // =========================================================
+  let audioContext = null;
+  function getAudioContext() {
+    if (!audioContext) {
+      audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (audioContext.state === 'suspended') audioContext.resume();
+    return audioContext;
   }
-  // Priority cascade for natural-sounding male English voices
-  const priorities=[
-    v=>/Google UK English Male/i.test(v.name),
-    v=>/Microsoft Ryan.*Natural/i.test(v.name),
-    v=>/Microsoft Guy.*Natural/i.test(v.name),
-    v=>/Daniel.*Natural/i.test(v.name),
-    v=>/Natural/i.test(v.name)&&/en/i.test(v.lang)&&/male/i.test(v.name),
-    v=>/Natural/i.test(v.name)&&/en/i.test(v.lang),
-    v=>/Neural/i.test(v.name)&&/en/i.test(v.lang),
-    v=>/Premium/i.test(v.name)&&/en/i.test(v.lang),
-    v=>/Enhanced/i.test(v.name)&&/en/i.test(v.lang),
-    v=>/Daniel/i.test(v.name),
-    v=>/James/i.test(v.name)&&/en/i.test(v.lang),
-    v=>/Aaron/i.test(v.name),
-    v=>/Male/i.test(v.name)&&/en/i.test(v.lang),
-    v=>/en-GB/i.test(v.lang),
-    v=>/en-US/i.test(v.lang),
-    v=>/en/i.test(v.lang),
-  ];
-  for(const pred of priorities){
-    const found=allVoices.find(pred);
-    if(found)return found;
-  }
-  return allVoices[0]||null;
-}
 
-async function speak(text){
-  captionEl.textContent='"'+text+'"';
-  setStatus('speaking');
-
-  // ElevenLabs path
-  if(CONFIG.ELEVEN_LABS_API_KEY){
-    try{
-      const res=await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${CONFIG.ELEVEN_LABS_VOICE_ID}`,{
-        method:'POST',
-        headers:{'xi-api-key':CONFIG.ELEVEN_LABS_API_KEY,'Content-Type':'application/json','Accept':'audio/mpeg'},
-        body:JSON.stringify({text,model_id:CONFIG.ELEVEN_LABS_MODEL,voice_settings:{stability:.5,similarity_boost:.8}})
+  const Sound = {
+    beep(freq = 800, duration = 0.08, type = 'sine', gainVal = 0.05) {
+      if (!CONFIG.SOUND_FX) return;
+      try {
+        const ctx = getAudioContext();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, ctx.currentTime);
+        gain.gain.setValueAtTime(gainVal, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + duration);
+      } catch (e) {}
+    },
+    chime() {
+      if (!CONFIG.SOUND_FX) return;
+      [440, 554.37, 659.25, 880].forEach((f, i) => {
+        setTimeout(() => this.beep(f, 0.15, 'sine', 0.06), i * 75);
       });
-      if(!res.ok)throw new Error(res.status);
-      const blob=await res.blob();const url=URL.createObjectURL(blob);
-      const audio=new Audio(url);
-      audio.onended=()=>{setStatus(recognitionActive?'listening':'standby');URL.revokeObjectURL(url);};
-      audio.onerror=()=>speakBrowser(text);
-      audio.play();return;
-    }catch(e){console.warn('ElevenLabs fail, using browser voice:',e);}
+    },
+    alarm() {
+      if (!CONFIG.SOUND_FX) return;
+      for (let i = 0; i < 4; i++) {
+        setTimeout(() => {
+          this.beep(880, 0.12, 'square', 0.04);
+          setTimeout(() => this.beep(1200, 0.18, 'sine', 0.05), 140);
+        }, i * 450);
+      }
+    }
+  };
+
+  // =========================================================
+  // CORE TIMERS & AMBIENT GRAPHICS
+  // =========================================================
+  function updateClock(){
+    const now = new Date();
+    document.getElementById('clock').textContent = now.toLocaleTimeString('en-US', {hour12:false});
+    document.getElementById('dateStr').textContent = now.toLocaleDateString('en-US', {weekday:'long', month:'short', day:'numeric'});
   }
-  speakBrowser(text);
-}
+  setInterval(updateClock, 1000);
+  updateClock();
 
-function speakBrowser(text){
-  if(!('speechSynthesis' in window)){setStatus(recognitionActive?'listening':'standby');return;}
-  speechSynthesis.cancel();
-  const u=new SpeechSynthesisUtterance(text);
-  const v=pickBestVoice();
-  if(v)u.voice=v;
-  u.pitch=CONFIG.VOICE_PITCH;
-  u.rate=CONFIG.VOICE_RATE;
-  u.onend=()=>setStatus(recognitionActive?'listening':'standby');
-  speechSynthesis.speak(u);
-}
+  const sysStatusEl = document.getElementById('sysStatus');
+  const sysMessages = ["ALL SYSTEMS NOMINAL", "ARC MATRIX STABLE", "DEFENSE GRIDS ACTIVE", "COGNITIVE SYNAPSE LOADED"];
+  let sysIdx = 0;
+  setInterval(() => {
+    sysIdx = (sysIdx + 1) % sysMessages.length;
+    sysStatusEl.textContent = sysMessages[sysIdx];
+  }, 6000);
 
-// ===================================================================
-// WEEK PLANNER INTEGRATION (ukel-nn bridge)
-// ===================================================================
-// Events stored locally as JARVIS-side source of truth.
-// Can sync FROM the planner iframe via postMessage or manual entry.
-let calendarEvents=[];
-try{const e=localStorage.getItem('jarvis_events');if(e)calendarEvents=JSON.parse(e);}catch(e){}
+  // =========================================================
+  // DOM TELEMETRY MAPPINGS
+  // =========================================================
+  const statusText = document.getElementById('statusText');
+  const captionEl = document.getElementById('caption');
+  const voiceStatus = document.getElementById('voiceStatus');
+  const aiStatus = document.getElementById('aiStatus');
+  const spotifyStatusEl = document.getElementById('spotifyStatus');
+  const plannerStatusEl = document.getElementById('plannerStatus');
+  const activateBtn = document.getElementById('activateBtn');
+  const testBtn = document.getElementById('testBtn');
+  const spotifyBtn = document.getElementById('spotifyBtn');
+  const settingsBtn = document.getElementById('settingsBtn');
+  const calendarBtn = document.getElementById('calendarBtn');
+  const syncBtn = document.getElementById('syncBtn');
+  const waveform = document.getElementById('waveform');
+  const innerRing = document.getElementById('innerRing');
+  const footnote = document.getElementById('footnote');
+  const textInput = document.getElementById('textInput');
+  const sendBtn = document.getElementById('sendBtn');
+  const weatherBadge = document.getElementById('weatherBadge');
+  const plannerFrame = document.getElementById('plannerFrame');
 
-function saveEvents(){localStorage.setItem('jarvis_events',JSON.stringify(calendarEvents));}
+  const dataPanel = document.getElementById('dataPanel');
+  const panelTitle = document.getElementById('panelTitle');
+  const panelImg = document.getElementById('panelImg');
+  const panelText = document.getElementById('panelText');
+  const panelBig = document.getElementById('panelBig');
+  const panelCanvas = document.getElementById('panelCanvas');
+  const eventsContainer = document.getElementById('eventsContainer');
+  const calendarArea = document.getElementById('calendarArea');
+  const timersList = document.getElementById('timersList');
 
-const DAYS=['sunday','monday','tuesday','wednesday','thursday','friday','saturday'];
-const DAY_LABELS=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  // Build audio telemetry visually
+  const BAR_COUNT = 20;
+  for (let i = 0; i < BAR_COUNT; i++) {
+    const bar = document.createElement('div');
+    bar.className = 'bar';
+    waveform.appendChild(bar);
+  }
+  const bars = waveform.querySelectorAll('.bar');
 
-function getTodayName(){return DAYS[new Date().getDay()];}
-function getTomorrowName(){return DAYS[(new Date().getDay()+1)%7];}
-function getDayIndex(name){return DAYS.findIndex(d=>d===name.toLowerCase());}
+  function setStatus(mode){
+    statusText.classList.remove('listening','speaking');
+    innerRing.classList.remove('pulse-listen','pulse-speak');
+    if (mode === 'listening'){
+      statusText.textContent = 'LISTENING...';
+      statusText.classList.add('listening');
+      innerRing.classList.add('pulse-listen');
+    } else if (mode === 'speaking'){
+      statusText.textContent = 'SPEAKING...';
+      statusText.classList.add('speaking');
+      innerRing.classList.add('pulse-speak');
+    } else {
+      statusText.textContent = 'STANDBY';
+    }
+  }
 
-function parseDayFromText(text){
-  const t=text.toLowerCase();
-  if(t.includes('today'))return getTodayName();
-  if(t.includes('tomorrow'))return getTomorrowName();
-  for(const d of DAYS){if(t.includes(d))return d;}
-  // "next monday" etc
-  const nextMatch=t.match(/next\s+(monday|tuesday|wednesday|thursday|friday|saturday|sunday)/);
-  if(nextMatch)return nextMatch[1];
-  return null;
-}
+  // =========================================================
+  // DISPLAY SLIDING PANELS
+  // =========================================================
+  let panelHideTimer = null;
+  function showPanel(){
+    clearTimeout(panelHideTimer);
+    dataPanel.classList.add('visible');
+  }
+  function autoHidePanel(delayMs = 25000){
+    clearTimeout(panelHideTimer);
+    panelHideTimer = setTimeout(() => dataPanel.classList.remove('visible'), delayMs);
+  }
+  function resetPanel(){
+    panelImg.style.display = 'none';
+    panelBig.style.display = 'none';
+    panelCanvas.style.display = 'none';
+    panelText.textContent = '';
+    calendarArea.style.display = 'none';
+    timersList.style.display = 'none';
+  }
+  function showPanelLoading(topic){
+    resetPanel();
+    panelTitle.textContent = topic.toUpperCase();
+    panelText.textContent = 'EXTRACTING MAINFRAME DATA...';
+    showPanel();
+  }
+  function showPanelArticle(title, extract, imgSrc){
+    resetPanel();
+    panelTitle.textContent = title.toUpperCase();
+    if(imgSrc){ panelImg.src = imgSrc; panelImg.style.display = 'block'; }
+    panelText.textContent = extract;
+    showPanel();
+    autoHidePanel();
+  }
+  function showPanelMath(expression, result){
+    resetPanel();
+    panelTitle.textContent = 'QUANTUM CALCULATION';
+    panelBig.textContent = result;
+    panelBig.style.display = 'block';
+    panelText.textContent = expression + ' = ' + result;
+    showPanel();
+    autoHidePanel();
+  }
+  function showPanelGraph(exprLabel){
+    resetPanel();
+    panelTitle.textContent = 'FUNCTION PLOT: f(x) = ' + exprLabel;
+    panelCanvas.style.display = 'block';
+    showPanel();
+    autoHidePanel();
+    return panelCanvas;
+  }
+  function showNowPlaying(track){
+    resetPanel();
+    panelTitle.textContent = 'NOW PLAYING';
+    const art = track.album && track.album.images && track.album.images[0];
+    if (art){ panelImg.src = art.url; panelImg.style.display = 'block'; }
+    panelText.textContent = track.name + ' — ' + track.artists.map(a => a.name).join(', ');
+    showPanel();
+    autoHidePanel();
+  }
 
-function formatEventsForSpeech(events,label){
-  if(!events.length)return `There's nothing scheduled for ${label}, sir. Your calendar is clear.`;
-  let speech=`For ${label}, you have ${events.length} event${events.length>1?'s':''}: `;
-  events.forEach((ev,i)=>{
-    speech+=`${ev.time?'At '+ev.time+', ':''}${ev.title}`;
-    if(i<events.length-1)speech+='; ';
-  });
-  return speech+', sir.';
-}
+  // =========================================================
+  // ACOUSTIC SPEECH ENGINE (FALLBACK MATRIX)
+  // =========================================================
+  let localVoices = [];
+  function populateVoices() {
+    localVoices = window.speechSynthesis.getVoices();
+    const sel = document.getElementById('voiceSelect');
+    sel.innerHTML = '<option value="">Default British (Classy J.A.R.V.I.S.)</option>';
+    localVoices.forEach(v => {
+      const opt = document.createElement('option');
+      opt.value = v.name;
+      opt.textContent = `${v.name} (${v.lang})`;
+      sel.appendChild(opt);
+    });
+    if (CONFIG.VOICE_NAME) sel.value = CONFIG.VOICE_NAME;
+  }
 
-function renderEventCards(events,label){
-  resetPanel();
-  panelTitle.textContent='📅 '+label.toUpperCase();
-  eventsContainer.innerHTML='';
-  if(!events.length){
-    panelText.textContent='No events scheduled.';
-  } else {
-    const today=getTodayName();
-    const tomorrow=getTomorrowName();
-    events.forEach(ev=>{
-      const card=document.createElement('div');
-      card.className='event-card';
-      if(ev.day&&ev.day.toLowerCase()===today)card.classList.add('today');
-      else if(ev.day&&ev.day.toLowerCase()===tomorrow)card.classList.add('tomorrow');
-      card.innerHTML=`
-        <div class="ev-day">${(ev.day||'').toUpperCase()}</div>
-        ${ev.time?`<div class="ev-time">${ev.time}</div>`:''}
+  if ('speechSynthesis' in window) {
+    window.speechSynthesis.onvoiceschanged = populateVoices;
+    populateVoices();
+  }
+
+  async function speak(text){
+    captionEl.textContent = '"' + text + '"';
+    setStatus('speaking');
+
+    if (CONFIG.ELEVEN_LABS_API_KEY) {
+      try {
+        const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${CONFIG.ELEVEN_LABS_VOICE_ID}`, {
+          method: 'POST',
+          headers: {
+            'xi-api-key': CONFIG.ELEVEN_LABS_API_KEY,
+            'Content-Type': 'application/json',
+            'Accept': 'audio/mpeg'
+          },
+          body: JSON.stringify({
+            text: text,
+            model_id: CONFIG.ELEVEN_LABS_MODEL,
+            voice_settings: { stability: 0.5, similarity_boost: 0.85 }
+          })
+        });
+        if (!res.ok) throw new Error('ElevenLabs API response failed.');
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const audio = new Audio(url);
+        audio.onended = () => {
+          setStatus(recognitionActive ? 'listening' : 'standby');
+          URL.revokeObjectURL(url);
+        };
+        audio.onerror = () => speakBrowser(text);
+        audio.play();
+        return;
+      } catch(err) {
+        console.warn('ElevenLabs unavailable. Using classy local synthesizer.', err);
+      }
+    }
+    speakBrowser(text);
+  }
+
+  function pickBestLocalVoice(){
+    if (CONFIG.VOICE_NAME) {
+      const selected = localVoices.find(v => v.name === CONFIG.VOICE_NAME);
+      if (selected) return selected;
+    }
+    // Sophisticated matching algorithm for Classy British J.A.R.V.I.S.
+    const priorityMatch = [
+      /Google UK English Male/i,
+      /Microsoft Ryan.*Natural/i,
+      /Microsoft Oliver/i,
+      /Daniel/i,
+      /Hazel/i,
+      /en-GB.*Male/i,
+      /en-GB/i,
+      /en-US.*Male/i
+    ];
+    for (let regex of priorityMatch) {
+      const match = localVoices.find(v => regex.test(v.name));
+      if (match) return match;
+    }
+    return localVoices.find(v => v.lang.startsWith('en')) || localVoices[0];
+  }
+
+  function speakBrowser(text){
+    if (!('speechSynthesis' in window)){
+      setStatus(recognitionActive ? 'listening' : 'standby');
+      return;
+    }
+    window.speechSynthesis.cancel();
+    const utter = new SpeechSynthesisUtterance(text);
+    const voice = pickBestLocalVoice();
+    if (voice) utter.voice = voice;
+    utter.pitch = CONFIG.VOICE_PITCH;
+    utter.rate = CONFIG.VOICE_RATE;
+    utter.onend = () => setStatus(recognitionActive ? 'listening' : 'standby');
+    window.speechSynthesis.speak(utter);
+  }
+
+  // =========================================================
+  // WEATHER LOGIC (FREE IP & WEATHER API, NO KEYS REQUIRED)
+  // =========================================================
+  const weatherDescriptions = {
+    0: "clear skies", 1: "mainly clear skies", 2: "partly cloudy atmosphere", 3: "overcast skies",
+    45: "ambient fog", 48: "depositing rime fog", 51: "light drizzle", 61: "slight rain",
+    63: "moderate rain showers", 65: "heavy rain", 71: "light snowfall", 95: "thunderstorm systems"
+  };
+
+  async function updateWeather(cityName = null){
+    try {
+      let lat = 51.5074, lon = -0.1278, locationString = "London";
+      if (cityName) {
+        const geoRes = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(cityName)}`);
+        const geoData = await geoRes.json();
+        if (geoData && geoData.length > 0) {
+          lat = parseFloat(geoData[0].lat);
+          lon = parseFloat(geoData[0].lon);
+          locationString = geoData[0].display_name.split(',')[0];
+        } else {
+          speak(`My apologies, I cannot locate coordinates for ${cityName}, sir.`);
+          return;
+        }
+      } else {
+        // Find rough coordinate mapping of visitor
+        try {
+          const ipRes = await fetch('https://ipapi.co/json/');
+          const ipData = await ipRes.json();
+          if (ipData.latitude && ipData.longitude) {
+            lat = ipData.latitude;
+            lon = ipData.longitude;
+            locationString = ipData.city || "your sector";
+          }
+        } catch(e){}
+      }
+
+      const weatherRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`);
+      const weatherData = await weatherRes.json();
+      if (!weatherData || !weatherData.current_weather) throw new Error();
+
+      const current = weatherData.current_weather;
+      const condition = weatherDescriptions[current.weathercode] || "clear skies";
+      const tempCelsius = Math.round(current.temperature);
+      const tempFahrenheit = Math.round(tempCelsius * 9/5 + 32);
+
+      weatherBadge.textContent = `${tempCelsius}°C / ${tempFahrenheit}°F [${condition.toUpperCase()}]`;
+      speak(`The weather in ${locationString} is currently registering ${tempCelsius} degrees with ${condition}, sir.`);
+      
+      resetPanel();
+      panelTitle.textContent = `METEOROLOGICAL REPORT: ${locationString.toUpperCase()}`;
+      panelBig.textContent = `${tempCelsius}°C`;
+      panelBig.style.display = 'block';
+      panelText.textContent = `Condition: ${condition.toUpperCase()}\nWind Velocity: ${current.windspeed} km/h\nLatitude: ${lat.toFixed(4)}\nLongitude: ${lon.toFixed(4)}`;
+      showPanel();
+      autoHidePanel();
+    } catch(err) {
+      console.warn('Weather system fetch failed.', err);
+      weatherBadge.textContent = "METEOROLOGY: DETACHED";
+    }
+  }
+
+  // Auto boot atmospheric report
+  setTimeout(() => updateWeather(), 2000);
+
+  // =========================================================
+  // INTEGRATED CALENDAR & WEEK PLANNER MATRIX (SELF-HEALING)
+  // =========================================================
+  let calendarEvents = [
+    { day: "Monday", time: "09:00", title: "Internal Diagnostics Run", desc: "Checking core arc reactor stability." },
+    { day: "Wednesday", time: "14:30", title: "Mainframe Hardware Upgrade", desc: "Optimal vector computations installation." },
+    { day: "Friday", time: "18:00", title: "Stark Lab Briefing", desc: "Tony Stark scheduled briefings." }
+  ];
+
+  try {
+    const savedEvents = localStorage.getItem('jarvis_calendar_events');
+    if (savedEvents) calendarEvents = JSON.parse(savedEvents);
+  } catch(e){}
+
+  function saveCalendar() {
+    localStorage.setItem('jarvis_calendar_events', JSON.stringify(calendarEvents));
+    renderCalendar();
+  }
+
+  function renderCalendar() {
+    eventsContainer.innerHTML = '';
+    if (calendarEvents.length === 0) {
+      eventsContainer.innerHTML = '<div style="font-size:11px; text-align:center; padding:12px; color:var(--text-dim);">NO SCHEDULED LAB PHASES</div>';
+      return;
+    }
+
+    const sortDays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+    const sorted = [...calendarEvents].sort((a,b) => {
+      const dayDiff = sortDays.indexOf(a.day) - sortDays.indexOf(b.day);
+      if (dayDiff !== 0) return dayDiff;
+      return (a.time || '').localeCompare(b.time || '');
+    });
+
+    sorted.forEach((ev, index) => {
+      const card = document.createElement('div');
+      card.className = 'event-card';
+      card.innerHTML = `
+        <div class="ev-header">
+          <span>${ev.day.toUpperCase()} ${ev.time ? `&middot; ${ev.time}` : ''}</span>
+        </div>
         <div class="ev-title">${ev.title}</div>
-        ${ev.desc?`<div class="ev-desc">${ev.desc}</div>`:''}
+        ${ev.desc ? `<div class="ev-desc">${ev.desc}</div>` : ''}
+        <button class="ev-del" data-idx="${index}">REMOVE</button>
       `;
       eventsContainer.appendChild(card);
     });
-  }
-  showPanel();autoHidePanel(18000);
-}
 
-function getEventsForDay(dayName){
-  return calendarEvents.filter(e=>e.day&&e.day.toLowerCase()===dayName.toLowerCase())
-    .sort((a,b)=>(a.time||'').localeCompare(b.time||''));
-}
-
-function getUpcomingEvents(){
-  const todayIdx=new Date().getDay();
-  return calendarEvents.slice().sort((a,b)=>{
-    const aDist=(getDayIndex(a.day)-todayIdx+7)%7;
-    const bDist=(getDayIndex(b.day)-todayIdx+7)%7;
-    if(aDist!==bDist)return aDist-bDist;
-    return(a.time||'').localeCompare(b.time||'');
-  });
-}
-
-function getThisWeekEvents(){
-  return getUpcomingEvents();
-}
-
-// Add event from voice: "add event friday 2pm team meeting"
-function addEventFromVoice(text){
-  const t=text.toLowerCase();
-  let day=parseDayFromText(t);
-  if(!day)day=getTodayName();
-
-  // Extract time
-  const timeMatch=t.match(/(\d{1,2})\s*(?::(\d{2}))?\s*(am|pm)?/);
-  let time='';
-  if(timeMatch){
-    let h=parseInt(timeMatch[1]);
-    const m=timeMatch[2]||'00';
-    const ampm=timeMatch[3];
-    if(ampm==='pm'&&h<12)h+=12;
-    if(ampm==='am'&&h===12)h=0;
-    time=String(h).padStart(2,'0')+':'+m;
-  }
-
-  // Extract title: everything after the day/time info
-  let title=t.replace(/add\s+(?:an?\s+)?event\s*/i,'')
-    .replace(/\b(today|tomorrow|monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/gi,'')
-    .replace(/\b(next)\b/gi,'')
-    .replace(/\d{1,2}\s*(?::\d{2})?\s*(?:am|pm)?/gi,'')
-    .replace(/\bat\b/gi,'')
-    .trim();
-  if(!title)title='New Event';
-  title=title.charAt(0).toUpperCase()+title.slice(1);
-
-  const ev={day:day.charAt(0).toUpperCase()+day.slice(1),time,title,desc:''};
-  calendarEvents.push(ev);
-  saveEvents();
-
-  renderEventCards([ev],'NEW EVENT ADDED');
-  speak(`Done, sir. I've added "${title}" on ${ev.day}${time?' at '+time:''}.`);
-}
-
-function removeEventFromVoice(text){
-  const t=text.toLowerCase();
-  const titleMatch=t.match(/(?:remove|delete|cancel)\s+(?:event\s+)?(.+)/);
-  if(!titleMatch){speak("Which event should I remove, sir?");return;}
-  const query=titleMatch[1].trim();
-  const idx=calendarEvents.findIndex(e=>e.title.toLowerCase().includes(query));
-  if(idx===-1){speak(`I couldn't find an event matching "${query}", sir.`);return;}
-  const removed=calendarEvents.splice(idx,1)[0];
-  saveEvents();
-  speak(`Removed "${removed.title}" from ${removed.day}, sir.`);
-}
-
-// ===================================================================
-// PLANNER IFRAME SYNC (postMessage bridge)
-// ===================================================================
-// We listen for messages from the planner iframe.
-// If the planner sends its data, we merge it.
-let plannerSynced=false;
-
-window.addEventListener('message',(evt)=>{
-  // Accept messages from the planner origin
-  if(!evt.origin.includes('kraftalver-png.github.io'))return;
-  try{
-    const data=typeof evt.data==='string'?JSON.parse(evt.data):evt.data;
-    if(data.type==='jarvis-events'||data.type==='planner-data'||data.events){
-      const events=data.events||data;
-      if(Array.isArray(events)&&events.length){
-        // Merge: avoid duplicates by title+day
-        const existing=new Set(calendarEvents.map(e=>(e.day||'')+':'+e.title));
-        let added=0;
-        events.forEach(e=>{
-          const key=(e.day||'')+':'+e.title;
-          if(!existing.has(key)){calendarEvents.push(e);existing.add(key);added++;}
-        });
-        saveEvents();
-        plannerStatusEl.textContent=`SYNCED (${calendarEvents.length} events)`;
-        plannerSynced=true;
-        if(added>0)speak(`Planner synchronized, sir. ${added} new event${added>1?'s':''} imported.`);
-        else speak("Planner data is already up to date, sir.");
-      }
-    }
-  }catch(e){console.log('Planner message parse error:',e);}
-});
-
-// Request data from planner
-function requestPlannerSync(){
-  plannerStatusEl.textContent='SYNCING...';
-  try{
-    // Try postMessage to iframe
-    plannerFrame.contentWindow.postMessage(JSON.stringify({type:'jarvis-request-events'}),'*');
-    // Also try to read planner localStorage via a fetch-parse approach
-    fetchPlannerData();
-  }catch(e){
-    console.warn('Planner sync error:',e);
-    fetchPlannerData();
-  }
-  // Timeout fallback
-  setTimeout(()=>{
-    if(!plannerSynced){
-      plannerStatusEl.textContent=calendarEvents.length?`LOCAL (${calendarEvents.length})`:'MANUAL MODE';
-    }
-  },5000);
-}
-
-// Attempt to scrape planner page for event data
-async function fetchPlannerData(){
-  try{
-    const res=await fetch(CONFIG.PLANNER_URL);
-    if(!res.ok)throw new Error(res.status);
-    const html=await res.text();
-    const parser=new DOMParser();
-    const doc=parser.parseFromString(html,'text/html');
-
-    // Try to find event data in the page
-    // Look for common patterns: localStorage keys in script tags, data attributes, etc.
-    const scripts=doc.querySelectorAll('script');
-    let foundEvents=[];
-
-    // Strategy 1: Look for JSON data in scripts
-    scripts.forEach(s=>{
-      const code=s.textContent;
-      // Look for event arrays or localStorage references
-      const matches=code.match(/(?:events|tasks|schedule|planner)\s*[:=]\s*(\[[\s\S]*?\])/gi);
-      if(matches){
-        matches.forEach(m=>{
-          try{
-            const json=m.replace(/^[^[]+/,'');
-            const parsed=JSON.parse(json);
-            if(Array.isArray(parsed))foundEvents.push(...parsed);
-          }catch(e){}
-        });
-      }
-    });
-
-    // Strategy 2: Look for event-like DOM elements
-    const dayContainers=doc.querySelectorAll('[class*="day"],[class*="event"],[class*="task"],[data-day]');
-    dayContainers.forEach(el=>{
-      const dayAttr=el.getAttribute('data-day')||el.className.match(/(monday|tuesday|wednesday|thursday|friday|saturday|sunday)/i);
-      if(dayAttr){
-        const day=typeof dayAttr==='string'?dayAttr:dayAttr[1];
-        const items=el.querySelectorAll('[class*="event"],[class*="task"],[class*="item"],li,p');
-        items.forEach(item=>{
-          const text=item.textContent.trim();
-          if(text&&text.length>1&&text.length<200){
-            foundEvents.push({day:day.charAt(0).toUpperCase()+day.slice(1),title:text,time:'',desc:''});
-          }
-        });
-      }
-    });
-
-    // Strategy 3: table cells pattern
-    const cells=doc.querySelectorAll('td,th');
-    let currentDay='';
-    cells.forEach(cell=>{
-      const text=cell.textContent.trim().toLowerCase();
-      if(DAYS.includes(text)){currentDay=text.charAt(0).toUpperCase()+text.slice(1);}
-      else if(currentDay&&text&&text.length>1&&text.length<200&&!/^(time|event|task|description|notes?)$/i.test(text)){
-        foundEvents.push({day:currentDay,title:cell.textContent.trim(),time:'',desc:''});
-      }
-    });
-
-    if(foundEvents.length){
-      const existing=new Set(calendarEvents.map(e=>(e.day||'')+':'+(e.title||'')));
-      let added=0;
-      foundEvents.forEach(e=>{
-        if(!e.title)return;
-        const key=(e.day||'')+':'+e.title;
-        if(!existing.has(key)){calendarEvents.push(e);existing.add(key);added++;}
+    // Wire up deletion buttons
+    eventsContainer.querySelectorAll('.ev-del').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        Sound.beep(500, 0.05);
+        const idx = parseInt(e.target.getAttribute('data-idx'));
+        calendarEvents.splice(idx, 1);
+        saveCalendar();
+        speak("Event has been purged from memory, sir.");
       });
-      if(added){saveEvents();plannerStatusEl.textContent=`SYNCED (${calendarEvents.length})`;plannerSynced=true;}
-    }
-  }catch(e){console.warn('Fetch planner failed:',e);}
-}
-
-syncBtn.addEventListener('click',()=>{SFX.beep(600,.06);requestPlannerSync();});
-calendarBtn.addEventListener('click',()=>{
-  SFX.chime();
-  const events=getThisWeekEvents();
-  renderEventCards(events,'THIS WEEK');
-  speak(formatEventsForSpeech(events,'this week'));
-});
-
-// ===================================================================
-// WEATHER (Open-Meteo — no API key needed)
-// ===================================================================
-const weatherCodes={0:"clear",1:"mainly clear",2:"partly cloudy",3:"overcast",45:"foggy",51:"light drizzle",61:"rain",63:"moderate rain",65:"heavy rain",71:"snow",95:"thunderstorms"};
-
-async function getWeather(city=null){
-  try{
-    let lat=51.5,lon=-0.13,loc="London";
-    if(city){
-      const g=await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(city)}`);
-      const gd=await g.json();
-      if(gd&&gd[0]){lat=parseFloat(gd[0].lat);lon=parseFloat(gd[0].lon);loc=gd[0].display_name.split(',')[0];}
-      else{speak(`I couldn't locate ${city}, sir.`);return;}
-    }else if(navigator.geolocation){
-      try{const p=await new Promise((r,j)=>navigator.geolocation.getCurrentPosition(r,j,{timeout:5000}));lat=p.coords.latitude;lon=p.coords.longitude;loc="your location";}catch(e){}
-    }
-    const res=await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`);
-    const d=await res.json();if(!d||!d.current_weather)throw new Error('no data');
-    const cw=d.current_weather;const cond=weatherCodes[cw.weathercode]||"clear";
-    const tC=Math.round(cw.temperature),tF=Math.round(tC*9/5+32);
-    weatherBadge.textContent=`${tC}°C / ${tF}°F [${cond.toUpperCase()}]`;
-
-    resetPanel();panelTitle.textContent=`ATMOSPHERIC: ${loc.toUpperCase()}`;
-    panelBig.textContent=`${tC}°C / ${tF}°F`;panelBig.style.display='block';
-    panelText.textContent=`Conditions: ${cond.toUpperCase()}\nWind: ${cw.windspeed} km/h`;
-    showPanel();autoHidePanel();
-    speak(`Currently in ${loc}, it's ${tC} degrees with ${cond}, sir.`);
-  }catch(e){speak("Atmospheric sensors are offline, sir.");}
-}
-setTimeout(()=>{getWeather(null).catch(()=>{});},1500);
-
-// ===================================================================
-// TIMERS
-// ===================================================================
-const activeTimers=[];
-function setTimer(secs,label="Timer"){
-  activeTimers.push({id:Math.random().toString(36).substr(2,6),label,secondsRemaining:secs,endTime:Date.now()+secs*1000});
-  renderTimers();
-  speak(`Timer set for ${secs>=60?Math.floor(secs/60)+' minutes':secs+' seconds'}, sir.`);
-}
-function renderTimers(){
-  timersList.innerHTML='';
-  if(activeTimers.length){showPanel();panelTitle.textContent='ACTIVE TIMERS';}
-  activeTimers.forEach(t=>{
-    const el=document.createElement('div');el.className='timer-card';
-    const m=Math.floor(t.secondsRemaining/60),s=t.secondsRemaining%60;
-    el.innerHTML=`<span>${t.label}</span><span class="timer-val">${m}:${s<10?'0':''}${s}</span>`;
-    timersList.appendChild(el);
-  });
-}
-setInterval(()=>{
-  if(!activeTimers.length)return;
-  const now=Date.now();
-  for(let i=activeTimers.length-1;i>=0;i--){
-    const t=activeTimers[i];t.secondsRemaining=Math.max(0,Math.ceil((t.endTime-now)/1000));
-    if(t.secondsRemaining<=0){SFX.alarm();speak(`Sir, your ${t.label} has finished.`);activeTimers.splice(i,1);}
-  }
-  renderTimers();
-},1000);
-
-// ===================================================================
-// MATH & GRAPHING
-// ===================================================================
-function wordsToMath(raw){let s=' '+raw.toLowerCase()+' ';s=s.replace(/what is|what's|calculate|solve|equals|equal to/g,' ');s=s.replace(/square root of ([\w.]+)/g,'sqrt($1)');s=s.replace(/([\w.]+) squared/g,'($1)^2');s=s.replace(/([\w.]+) cubed/g,'($1)^3');s=s.replace(/to the power of/g,'^');s=s.replace(/\bplus\b/g,'+');s=s.replace(/\bminus\b/g,'-');s=s.replace(/\btimes\b|\bmultiplied by\b/g,'*');s=s.replace(/\bdivided by\b|\bover\b/g,'/');return s.trim();}
-function wordsToFunc(raw){let s=' '+raw.toLowerCase()+' ';s=s.replace(/graph|plot|of(?! x)/g,' ');s=s.replace(/x squared/g,'x^2');s=s.replace(/x cubed/g,'x^3');s=s.replace(/sine? of x/g,'sin(x)');s=s.replace(/cosine? of x/g,'cos(x)');return s.trim()||'x';}
-
-function drawGraph(canvas,expr){
-  const ctx=canvas.getContext('2d'),w=canvas.width,h=canvas.height;
-  ctx.clearRect(0,0,w,h);ctx.fillStyle='rgba(7,24,35,.85)';ctx.fillRect(0,0,w,h);
-  const range=10;const toY=y=>h/2-(y/range)*(h/2*.9);
-  ctx.strokeStyle='rgba(79,216,255,.25)';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(0,h/2);ctx.lineTo(w,h/2);ctx.moveTo(w/2,0);ctx.lineTo(w/2,h);ctx.stroke();
-  let compiled;try{compiled=math.compile(expr);}catch(e){return false;}
-  ctx.strokeStyle=getComputedStyle(document.body).getPropertyValue('--cyan-bright').trim()||'#a9f3ff';
-  ctx.lineWidth=2.5;ctx.shadowColor='rgba(79,216,255,.8)';ctx.shadowBlur=8;ctx.beginPath();
-  let started=false;
-  for(let px=0;px<=w;px++){
-    const x=(px/w)*(range*2)-range;let y;try{y=compiled.evaluate({x});}catch(e){y=null;}
-    if(typeof y!=='number'||!isFinite(y)||Math.abs(y)>range*3){started=false;continue;}
-    const py=toY(y);if(!started){ctx.moveTo(px,py);started=true;}else ctx.lineTo(px,py);
-  }
-  ctx.stroke();ctx.shadowBlur=0;return true;
-}
-
-// ===================================================================
-// WIKIPEDIA
-// ===================================================================
-async function wikiLookup(topic){
-  topic=topic.trim().replace(/[?.!]+$/,'');if(!topic)return;
-  resetPanel();panelTitle.textContent=topic.toUpperCase();panelText.textContent='ACCESSING ARCHIVES...';showPanel();
-  try{
-    let res=await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(topic)}`);
-    if(!res.ok){const sr=await(await fetch(`https://en.wikipedia.org/w/api.php?action=opensearch&search=${encodeURIComponent(topic)}&limit=1&format=json&origin=*`)).json();if(sr[1]&&sr[1][0])res=await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(sr[1][0])}`);}
-    if(!res.ok)throw new Error('not found');
-    const d=await res.json();const extract=d.extract||'No data.';const thumb=d.thumbnail?d.thumbnail.source:null;
-    resetPanel();panelTitle.textContent=(d.title||topic).toUpperCase();
-    if(thumb){panelImg.src=thumb;panelImg.style.display='block';}
-    panelText.textContent=extract;showPanel();autoHidePanel();
-    const short=extract.split('. ').slice(0,2).join('. ');speak((short.endsWith('.')?short:short+'.')+'');
-  }catch(e){resetPanel();panelTitle.textContent='NO DATA';panelText.textContent='No records for "'+topic+'".';showPanel();autoHidePanel(6000);speak("I couldn't find anything on that in the archives, sir.");}
-}
-
-// ===================================================================
-// LLM FALLBACK (OPTIONAL)
-// ===================================================================
-async function askLLM(prompt){
-  if(!CONFIG.LLM_API_KEY)return false;
-  try{
-    resetPanel();panelTitle.textContent='NEURAL REASONING';panelText.textContent='Processing...';showPanel();
-    // Include calendar context
-    const calContext=calendarEvents.length?`\n\nThe user's current schedule:\n${calendarEvents.map(e=>`${e.day} ${e.time||''}: ${e.title}`).join('\n')}`:'';
-    const res=await fetch(CONFIG.LLM_API_URL,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+CONFIG.LLM_API_KEY},
-      body:JSON.stringify({model:CONFIG.LLM_MODEL,messages:[
-        {role:"system",content:"You are J.A.R.V.I.S., Tony Stark's sophisticated British AI assistant. Address the user as 'sir'. Be concise, articulate, and witty. Keep answers under 3 sentences."+calContext},
-        {role:"user",content:prompt}
-      ]})
     });
-    const d=await res.json();
-    if(d.choices&&d.choices[0]){const reply=d.choices[0].message.content;panelText.textContent=reply;autoHidePanel();speak(reply);return true;}
-  }catch(e){console.warn(e);}
-  return false;
-}
-
-// ===================================================================
-// SPOTIFY (PKCE)
-// ===================================================================
-function genRandom(n){const c='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';let t='';crypto.getRandomValues(new Uint8Array(n)).forEach(v=>t+=c[v%c.length]);return t;}
-function b64url(buf){let s='';new Uint8Array(buf).forEach(b=>s+=String.fromCharCode(b));return btoa(s).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');}
-async function codeChallenge(v){return b64url(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(v)));}
-
-async function connectSpotify(){
-  if(!CONFIG.SPOTIFY_CLIENT_ID){alert('Set your Spotify Client ID in Config first.');return;}
-  const v=genRandom(64);localStorage.setItem('spotify_verifier',v);
-  const ch=await codeChallenge(v);
-  window.location='https://accounts.spotify.com/authorize?'+new URLSearchParams({client_id:CONFIG.SPOTIFY_CLIENT_ID,response_type:'code',redirect_uri:SPOTIFY_REDIRECT_URI,scope:SPOTIFY_SCOPES,code_challenge_method:'S256',code_challenge:ch});
-}
-
-async function handleSpotifyRedirect(){
-  const code=new URLSearchParams(location.search).get('code');if(!code)return;
-  try{
-    const res=await fetch('https://accounts.spotify.com/api/token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},
-      body:new URLSearchParams({client_id:CONFIG.SPOTIFY_CLIENT_ID,grant_type:'authorization_code',code,redirect_uri:SPOTIFY_REDIRECT_URI,code_verifier:localStorage.getItem('spotify_verifier')})});
-    const d=await res.json();
-    if(d.access_token){localStorage.setItem('spotify_access_token',d.access_token);if(d.refresh_token)localStorage.setItem('spotify_refresh_token',d.refresh_token);localStorage.setItem('spotify_expires_at',String(Date.now()+(d.expires_in||3600)*1000));history.replaceState({},'',location.pathname);updateSpotifyUI(true);}
-  }catch(e){}
-}
-function updateSpotifyUI(c){spotifyStatusEl.textContent=c?'CONNECTED':'DISCONNECTED';spotifyBtn.textContent=c?'Spotify ✓':'Spotify';spotifyBtn.classList.toggle('active',c);}
-async function getSpotifyToken(){
-  const t=localStorage.getItem('spotify_access_token'),exp=parseInt(localStorage.getItem('spotify_expires_at')||'0');
-  if(t&&Date.now()<exp-5000)return t;
-  const rt=localStorage.getItem('spotify_refresh_token');if(!rt||!CONFIG.SPOTIFY_CLIENT_ID)return null;
-  try{const res=await fetch('https://accounts.spotify.com/api/token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({grant_type:'refresh_token',refresh_token:rt,client_id:CONFIG.SPOTIFY_CLIENT_ID})});const d=await res.json();if(d.access_token){localStorage.setItem('spotify_access_token',d.access_token);return d.access_token;}}catch(e){}return null;
-}
-async function spotifyFetch(path,opts={}){const t=await getSpotifyToken();if(!t)throw new Error('not_connected');return fetch('https://api.spotify.com/v1'+path,{...opts,headers:{...(opts.headers||{}),'Authorization':'Bearer '+t}});}
-async function spotifyPlay(q){
-  try{if(q){const sr=await spotifyFetch('/search?q='+encodeURIComponent(q)+'&type=track&limit=1');const sd=await sr.json();const tr=sd.tracks&&sd.tracks.items&&sd.tracks.items[0];if(!tr){speak("Track not found, sir.");return;}await spotifyFetch('/me/player/play',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({uris:[tr.uri]})});speak(`Playing ${tr.name} by ${tr.artists[0].name}, sir.`);showNowPlaying(tr);}
-  else{await spotifyFetch('/me/player/play',{method:'PUT'});speak('Resuming, sir.');}
-  }catch(e){speak("Open Spotify on a device first, sir.");}
-}
-spotifyBtn.addEventListener('click',connectSpotify);
-
-function showNowPlaying(tr){
-  resetPanel();panelTitle.textContent='NOW PLAYING';
-  if(tr.album&&tr.album.images&&tr.album.images[0]){panelImg.src=tr.album.images[0].url;panelImg.style.display='block';}
-  panelText.textContent=tr.name+' — '+tr.artists.map(a=>a.name).join(', ');showPanel();autoHidePanel();
-}
-
-// ===================================================================
-// COMMAND PROCESSOR
-// ===================================================================
-function pick(a){return a[Math.floor(Math.random()*a.length)];}
-
-async function handleCommand(transcript){
-  SFX.chime();
-  const t=transcript.toLowerCase().trim();
-
-  // SLEEP
-  if(t.includes('go to sleep')||t.includes('power down')){speak("Powering down, sir. Call if you need me.");setTimeout(()=>stopRecognition(),1200);return;}
-
-  // STATUS
-  if(t.includes('status report')||t.includes('how are you')||t.includes('diagnostics')){speak("All systems are running within optimal parameters, sir. Arc reactor nominal.");return;}
-
-  // TIME
-  if(t.includes('what time')||t.includes("what's the time")){speak(`It's ${new Date().toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'})}, sir.`);return;}
-
-  // DATE
-  if(t.includes('what day')||t.includes("what's the date")||t.includes("today's date")){speak(`It's ${new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'})}, sir.`);return;}
-
-  // ======= CALENDAR COMMANDS =======
-  // "What's on my schedule" / "what's my week" / "upcoming events"
-  if(t.includes('schedule')||t.includes('my week')||t.includes('upcoming event')||t.includes('my calendar')||t.includes('all events')){
-    const events=getThisWeekEvents();renderEventCards(events,'THIS WEEK');speak(formatEventsForSpeech(events,'this week'));return;
-  }
-  // "What's today" / "what's on today"
-  if((t.includes("what's today")||t.includes("what is today")||t.includes("today's events")||t.includes("what's on today"))&&!t.includes('date')){
-    const events=getEventsForDay(getTodayName());renderEventCards(events,DAY_LABELS[new Date().getDay()]);speak(formatEventsForSpeech(events,'today'));return;
-  }
-  // "What's tomorrow"
-  if(t.includes("what's tomorrow")||t.includes("what is tomorrow")||t.includes("tomorrow's events")){
-    const events=getEventsForDay(getTomorrowName());renderEventCards(events,DAY_LABELS[(new Date().getDay()+1)%7]);speak(formatEventsForSpeech(events,'tomorrow'));return;
-  }
-  // "What's on Monday" etc.
-  const dayQueryMatch=t.match(/what(?:'s| is) (?:on )?(monday|tuesday|wednesday|thursday|friday|saturday|sunday)/);
-  if(dayQueryMatch){
-    const day=dayQueryMatch[1];const events=getEventsForDay(day);
-    renderEventCards(events,day.toUpperCase());speak(formatEventsForSpeech(events,day));return;
-  }
-  // "Add event"
-  if(t.includes('add event')||t.includes('add an event')||t.includes('new event')||t.includes('schedule event')){addEventFromVoice(t);return;}
-  // "Remove/delete/cancel event"
-  if(t.includes('remove event')||t.includes('delete event')||t.includes('cancel event')){removeEventFromVoice(t);return;}
-  // "Clear all events"
-  if(t.includes('clear all events')||t.includes('delete all events')){calendarEvents.length=0;saveEvents();speak("All events cleared, sir.");return;}
-  // "Sync planner" / "update planner"
-  if(t.includes('sync planner')||t.includes('update planner')||t.includes('sync calendar')){requestPlannerSync();return;}
-
-  // WEATHER
-  if(t.includes('weather')||t.includes('temperature')||t.includes('forecast')){const cm=t.match(/(?:in|for)\s+([a-zA-Z\s]+)/);getWeather(cm?cm[1]:null);return;}
-
-  // TIMER
-  const timerMatch=t.match(/timer\s+(?:for\s+)?(\d+)\s*(minute|min|second|sec)/);
-  if(timerMatch){setTimer(timerMatch[2].startsWith('min')?parseInt(timerMatch[1])*60:parseInt(timerMatch[1]),'Timer');return;}
-
-  // SPOTIFY
-  if(t==='pause'||t.includes('pause music')){try{await spotifyFetch('/me/player/pause',{method:'PUT'});speak('Paused, sir.');}catch(e){}return;}
-  if(t.includes('skip')||t.includes('next song')){try{await spotifyFetch('/me/player/next',{method:'POST'});speak('Skipping, sir.');}catch(e){}return;}
-  if(t.startsWith('play ')||t==='play music'){let q=t.replace(/^play\s+/,'').replace(/on spotify/,'').trim();spotifyPlay(q==='music'||!q?null:q);return;}
-  if(t.includes("what's playing")||t.includes('what song')){
-    try{const res=await spotifyFetch('/me/player/currently-playing');if(res.status===204){speak("Nothing playing right now, sir.");return;}
-    const d=await res.json();if(d&&d.item){speak(`This is ${d.item.name} by ${d.item.artists[0].name}, sir.`);showNowPlaying(d.item);}
-    else speak("Nothing playing, sir.");}catch(e){speak("Spotify not connected, sir.");}return;
   }
 
-  // GRAPH
-  if(/^(graph|plot)\b/.test(t)){const expr=wordsToFunc(t);const cv=showPanelGraph(expr);const ok=drawGraph(cv,expr);speak(ok?"Here's the graph, sir.":"Couldn't plot that, sir.");return;}
-
-  // MATH / CONVERT
-  if(t.includes('convert ')||/^(what is|what's|calculate|solve)\b/.test(t)){
-    const cm=wordsToMath(t);
-    try{const r=math.evaluate(cm.replace(/convert/g,''));if(r!==undefined){const rs=typeof r==='object'?math.format(r,{precision:6}):String(Math.round(r*10000)/10000);
-      resetPanel();panelTitle.textContent='CALCULATION';panelBig.textContent=rs;panelBig.style.display='block';panelText.textContent=cm+' = '+rs;showPanel();autoHidePanel();
-      speak(`That's ${rs}, sir.`);return;}}catch(e){}
+  function showInteractiveCalendar() {
+    resetPanel();
+    panelTitle.textContent = "CALENDAR TELEMETRY";
+    calendarArea.style.display = 'block';
+    renderCalendar();
+    showPanel();
   }
 
-  // WIKI
-  const wm=t.match(/^(what is|what's|who is|tell me about|define)\s+(.+)/);
-  if(wm){wikiLookup(wm[2]);return;}
+  calendarBtn.addEventListener('click', () => {
+    Sound.chime();
+    showInteractiveCalendar();
+  });
 
-  // GREETING
-  if(t.includes('hey jarvis')||t.includes('hello jarvis')||t==='jarvis'){
-    const h=new Date().getHours();
-    const greeting=h<12?"Good morning":h<18?"Good afternoon":"Good evening";
-    speak(`${greeting}, sir. At your service. You have ${calendarEvents.length} event${calendarEvents.length!==1?'s':''} on file.`);return;
+  // Adding events manually from GUI
+  document.getElementById('addEvSubmit').addEventListener('click', () => {
+    const title = document.getElementById('addEvTitle').value.trim();
+    const day = document.getElementById('addEvDay').value;
+    const time = document.getElementById('addEvTime').value.trim();
+    if (!title) {
+      speak("Command rejected. I require an event title, sir.");
+      return;
+    }
+    calendarEvents.push({ day, time, title, desc: "Manually registered in mainframe." });
+    saveCalendar();
+    document.getElementById('addEvTitle').value = '';
+    document.getElementById('addEvTime').value = '';
+    speak(`Perfect, sir. I have compiled "${title}" on ${day}.`);
+  });
+
+  // =========================================================
+  // INTEGRATED SCHEDULER & BRIDGES (krafatalver-png iframe)
+  // =========================================================
+  let isSynced = false;
+
+  window.addEventListener('message', (event) => {
+    if (!event.origin.includes('kraftalver-png.github.io')) return;
+    try {
+      const data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
+      if (data && (data.type === 'jarvis-events' || data.events)) {
+        const events = data.events || data;
+        if (Array.isArray(events) && events.length > 0) {
+          mergeSyncedEvents(events);
+        }
+      }
+    } catch(err){}
+  });
+
+  function mergeSyncedEvents(events) {
+    let newCount = 0;
+    const existingKeys = new Set(calendarEvents.map(e => `${e.day.toLowerCase()}:${e.title.toLowerCase()}`));
+    events.forEach(item => {
+      const key = `${(item.day || 'monday').toLowerCase()}:${(item.title || '').toLowerCase()}`;
+      if (item.title && !existingKeys.has(key)) {
+        calendarEvents.push({
+          day: item.day ? item.day.charAt(0).toUpperCase() + item.day.slice(1).toLowerCase() : "Monday",
+          time: item.time || "",
+          title: item.title,
+          desc: item.desc || "Imported telemetry synchronization."
+        });
+        newCount++;
+      }
+    });
+    if (newCount > 0) {
+      saveCalendar();
+      plannerStatusEl.textContent = `SYNCED (${calendarEvents.length} LAB PHASES)`;
+      isSynced = true;
+      speak(`Synchronization operational, sir. I have processed ${newCount} new events.`);
+    } else {
+      plannerStatusEl.textContent = `UP-TO-DATE (${calendarEvents.length})`;
+      speak("Holographic calendars are already in optimal lock-step, sir.");
+    }
   }
 
-  // LLM FALLBACK
-  if(CONFIG.LLM_API_KEY){if(await askLLM(t))return;}
+  // UNBREAKABLE SYNCHRONIZATION WITH FALLBACK CORS-PROXY METHOD
+  async function performUnbreakablePlannerSync() {
+    plannerStatusEl.textContent = "SYNAPSE LINKING...";
+    Sound.beep(900, 0.05);
 
-  // CONFUSION
-  if(t.includes('jarvis')||t.length>5){
-    speak(pick(["I'm afraid that's outside my current parameters, sir.","Could you rephrase that, sir?","I didn't quite catch that, sir. Try again?"]));
-  }
-}
+    // Technique 1: Attempt standard direct message to iframe
+    try {
+      plannerFrame.contentWindow.postMessage(JSON.stringify({ type: 'jarvis-request-events' }), '*');
+    } catch(e){}
 
-// ===================================================================
-// SPEECH RECOGNITION
-// ===================================================================
-let recognition=null,recognitionActive=false,wantsToListen=false;
-const SpeechRecognition=window.SpeechRecognition||window.webkitSpeechRecognition;
+    // Technique 2: Fallback to direct fetch of HTML using robust public CORS proxy
+    try {
+      const targetUrl = CONFIG.PLANNER_URL || DEFAULT_CONFIG.PLANNER_URL;
+      const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`;
+      
+      const res = await fetch(proxyUrl);
+      if (!res.ok) throw new Error();
+      const rawData = await res.json();
+      const htmlString = rawData.contents;
 
-function buildRec(){
-  const r=new SpeechRecognition();r.continuous=true;r.interimResults=true;r.lang='en-US';
-  r.onstart=()=>{recognitionActive=true;voiceStatus.textContent='ONLINE';setStatus('listening');activateBtn.textContent='Deactivate';activateBtn.classList.add('active');};
-  r.onerror=(e)=>{if(e.error==='not-allowed'){wantsToListen=false;voiceStatus.textContent='MIC BLOCKED';}};
-  r.onend=()=>{recognitionActive=false;if(!wantsToListen){activateBtn.textContent='Activate Voice';activateBtn.classList.remove('active');voiceStatus.textContent='OFFLINE';setStatus('standby');return;}setTimeout(()=>{try{if(wantsToListen)recognition.start();}catch(e){}},350);};
-  r.onresult=(ev)=>{let f='';for(let i=ev.resultIndex;i<ev.results.length;i++){if(ev.results[i].isFinal)f+=ev.results[i][0].transcript;}if(f)handleCommand(f);};
-  return r;
-}
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(htmlString, 'text/html');
+      const foundScraped = [];
 
-function startRec(){if(!SpeechRecognition){voiceStatus.textContent='UNSUPPORTED';return;}wantsToListen=true;recognition=buildRec();try{recognition.start();}catch(e){}}
-function stopRecognition(){wantsToListen=false;if(recognition)recognition.stop();}
+      // Flexible DOM Scraper targeting lists, tables, and div classes inside user's app
+      const items = doc.querySelectorAll('li, p, td, [class*="event"], [class*="task"], [class*="day"]');
+      const daysList = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
 
-let micCtx=null;
-async function startWaveform(){
-  try{const stream=await navigator.mediaDevices.getUserMedia({audio:true});micCtx=new(window.AudioContext||window.webkitAudioContext)();const src=micCtx.createMediaStreamSource(stream);const an=micCtx.createAnalyser();an.fftSize=64;src.connect(an);const data=new Uint8Array(an.frequencyBinCount);
-  (function tick(){if(!micCtx)return;an.getByteFrequencyData(data);bars.forEach((b,i)=>{const v=data[i%data.length]||0;b.style.height=Math.max(4,(v/255)*32)+'px';b.style.opacity=.4+(v/255)*.6;});requestAnimationFrame(tick);})();
-  }catch(e){}
-}
+      items.forEach(el => {
+        const text = el.textContent.trim();
+        if (text && text.length > 2 && text.length < 120) {
+          // Attempt parsing day context
+          let foundDay = "Monday";
+          for (let d of daysList) {
+            if (el.className.toLowerCase().includes(d) || (el.parentElement && el.parentElement.className.toLowerCase().includes(d))) {
+              foundDay = d.charAt(0).toUpperCase() + d.slice(1);
+              break;
+            }
+          }
+          foundScraped.push({ day: foundDay, title: text, time: "", desc: "Direct HTML scrape telemetry." });
+        }
+      });
 
-activateBtn.addEventListener('click',()=>{SFX.beep(600,.06);if(wantsToListen){stopRecognition();}else{startRec();startWaveform();}});
-testBtn.addEventListener('click',()=>{SFX.chime();speak("Good day, sir. All systems are functioning optimally. You have "+calendarEvents.length+" event"+(calendarEvents.length!==1?"s":"")+" on your calendar.");});
-
-// Text console
-function submitText(){const v=textInput.value.trim();if(!v)return;textInput.value='';handleCommand(v);}
-sendBtn.addEventListener('click',submitText);
-textInput.addEventListener('keydown',e=>{if(e.key==='Enter')submitText();});
-
-// Idle waveform
-setInterval(()=>{if(!micCtx)bars.forEach(b=>{b.style.height=(4+Math.random()*6)+'px';b.style.opacity=.35;});},350);
-
-// ===================================================================
-// CONFIG MODAL
-// ===================================================================
-function applyTheme(t){document.body.setAttribute('data-theme',t);}
-
-settingsBtn.addEventListener('click',()=>{
-  SFX.beep(750,.08);
-  $('themeSelect').value=CONFIG.THEME;
-  $('cfgPitch').value=CONFIG.VOICE_PITCH;
-  $('cfgRate').value=CONFIG.VOICE_RATE;
-  $('cfgPlannerUrl').value=CONFIG.PLANNER_URL;
-  $('cfgEventsJson').value=JSON.stringify(calendarEvents,null,2);
-  $('cfgLlmKey').value=CONFIG.LLM_API_KEY;
-  $('cfgLlmUrl').value=CONFIG.LLM_API_URL;
-  $('cfgElevenKey').value=CONFIG.ELEVEN_LABS_API_KEY;
-  $('cfgSpotifyId').value=CONFIG.SPOTIFY_CLIENT_ID;
-  $('cfgSoundFx').value=String(CONFIG.SOUND_FX);
-  if(CONFIG.VOICE_NAME)$('voiceSelect').value=CONFIG.VOICE_NAME;
-  $('settingsModal').classList.add('active');
-});
-
-$('closeConfigBtn').addEventListener('click',()=>$('settingsModal').classList.remove('active'));
-$('saveConfigBtn').addEventListener('click',()=>{
-  CONFIG.THEME=$('themeSelect').value;
-  CONFIG.VOICE_NAME=$('voiceSelect').value;
-  CONFIG.VOICE_PITCH=parseFloat($('cfgPitch').value)||0.9;
-  CONFIG.VOICE_RATE=parseFloat($('cfgRate').value)||0.95;
-  CONFIG.PLANNER_URL=$('cfgPlannerUrl').value.trim()||DEFAULT_CONFIG.PLANNER_URL;
-  CONFIG.LLM_API_KEY=$('cfgLlmKey').value.trim();
-  CONFIG.LLM_API_URL=$('cfgLlmUrl').value.trim()||DEFAULT_CONFIG.LLM_API_URL;
-  CONFIG.ELEVEN_LABS_API_KEY=$('cfgElevenKey').value.trim();
-  CONFIG.SPOTIFY_CLIENT_ID=$('cfgSpotifyId').value.trim();
-  CONFIG.SOUND_FX=$('cfgSoundFx').value==='true';
-
-  // Import manually edited events
-  try{const evJson=$('cfgEventsJson').value.trim();if(evJson){calendarEvents.length=0;calendarEvents.push(...JSON.parse(evJson));saveEvents();}}catch(e){alert('Invalid JSON in events field.');}
-
-  saveConfig();applyTheme(CONFIG.THEME);
-  aiStatus.textContent=CONFIG.LLM_API_KEY?'NEURAL LLM':'BUILT-IN';
-  plannerFrame.src=CONFIG.PLANNER_URL;
-  $('settingsModal').classList.remove('active');
-  SFX.chime();speak("Configuration deployed, sir.");
-});
-
-// ===================================================================
-// BOOT SEQUENCE
-// ===================================================================
-(async function boot(){
-  applyTheme(CONFIG.THEME||'classic');
-  aiStatus.textContent=CONFIG.LLM_API_KEY?'NEURAL LLM':'BUILT-IN';
-  plannerStatusEl.textContent=calendarEvents.length?`LOCAL (${calendarEvents.length})`:'SCANNING...';
-  if(localStorage.getItem('spotify_access_token'))updateSpotifyUI(true);
-  await handleSpotifyRedirect();
-
-  // Auto-start voice if permission already granted
-  if(navigator.permissions&&navigator.permissions.query){
-    try{const st=await navigator.permissions.query({name:'microphone'});if(st.state==='granted'){startRec();startWaveform();}}catch(e){}
+      if (foundScraped.length > 0) {
+        mergeSyncedEvents(foundScraped);
+      } else {
+        setTimeout(() => {
+          if (!isSynced) {
+            plannerStatusEl.textContent = `LOCAL (${calendarEvents.length})`;
+            speak("I could not compile schedules dynamically, sir. Local databases are loaded.");
+          }
+        }, 3000);
+      }
+    } catch(e) {
+      console.warn("Proxy scraper failed. Operating in local mode.");
+    }
   }
 
-  // Initial planner sync attempt
-  setTimeout(requestPlannerSync,3000);
-})();
+  syncBtn.addEventListener('click', () => {
+    performUnbreakablePlannerSync();
+  });
+
+  // =========================================================
+  // SCHEDULER INTENT INTERPRETER
+  // =========================================================
+  const DAYS_OF_WEEK = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
+
+  function getTodayName() {
+    return DAYS_OF_WEEK[new Date().getDay() === 0 ? 6 : new Date().getDay() - 1];
+  }
+
+  function interpretScheduleCommands(text) {
+    const t = text.toLowerCase();
+
+    // Query weekly events
+    if (t.includes('schedule') || t.includes('calendar') || t.includes('events') || t.includes('agenda')) {
+      showInteractiveCalendar();
+      if (calendarEvents.length === 0) {
+        speak("Your calendar is completely clean of any scheduled lab phases, sir.");
+      } else {
+        let textResult = `You have ${calendarEvents.length} phases scheduled on your local systems, sir. `;
+        calendarEvents.forEach(ev => {
+          textResult += `On ${ev.day}, ${ev.title}. `;
+        });
+        speak(textResult);
+      }
+      return true;
+    }
+
+    // Query specific day schedule
+    for (let day of DAYS_OF_WEEK) {
+      if (t.includes(`what's on ${day}`) || t.includes(`schedule for ${day}`) || t.includes(`events on ${day}`)) {
+        const filtered = calendarEvents.filter(e => e.day.toLowerCase() === day);
+        resetPanel();
+        panelTitle.textContent = `${day.toUpperCase()} PROTOCOLS`;
+        if (filtered.length === 0) {
+          speak(`No phases mapped to ${day}, sir.`);
+        } else {
+          let phrase = `On ${day}, you have: `;
+          filtered.forEach(ev => { phrase += `${ev.title}. `; });
+          speak(phrase);
+        }
+        showInteractiveCalendar();
+        return true;
+      }
+    }
+
+    // Add event command: "add event Friday 3pm diagnostics run"
+    if (t.includes('add event') || t.includes('schedule event') || t.includes('register event')) {
+      let day = "Monday";
+      for (let d of DAYS_OF_WEEK) {
+        if (t.includes(d)) { day = d.charAt(0).toUpperCase() + d.slice(1); break; }
+      }
+      // Extract time e.g., "15:00", "3pm", "3:30"
+      const timeMatch = t.match(/(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i);
+      let timeStr = "";
+      if (timeMatch) {
+        let hours = parseInt(timeMatch[1], 10);
+        const mins = timeMatch[2] || "00";
+        const ampm = timeMatch[3];
+        if (ampm && ampm.toLowerCase() === 'pm' && hours < 12) hours += 12;
+        if (ampm && ampm.toLowerCase() === 'am' && hours === 12) hours = 0;
+        timeStr = `${String(hours).padStart(2,'0')}:${mins}`;
+      }
+
+      // Cleanup words to get Title
+      let title = t.replace(/add event|schedule event|register event|monday|tuesday|wednesday|thursday|friday|saturday|sunday/g, "")
+                   .replace(/\b\d+.*(am|pm)?\b/gi, "")
+                   .replace(/\bat\b/gi, "")
+                   .trim();
+      if (!title) title = "Laboratory Phase";
+      title = title.charAt(0).toUpperCase() + title.slice(1);
+
+      calendarEvents.push({ day, time: timeStr, title, desc: "Holographically input by voice." });
+      saveCalendar();
+      showInteractiveCalendar();
+      speak(`Excellent. I have registered the event "${title}" on ${day} at ${timeStr || 'anytime'}, sir.`);
+      return true;
+    }
+
+    // Purge calendar command
+    if (t.includes('clear calendar') || t.includes('purge calendar') || t.includes('wipe calendar')) {
+      calendarEvents = [];
+      saveCalendar();
+      showInteractiveCalendar();
+      speak("Quantum schedule databases have been wiped, sir.");
+      return true;
+    }
+
+    return false;
+  }
+
+  // =========================================================
+  // MATHEMATICS & GRAPH DRAWING (MATHJS PLOTTING MATRIX)
+  // =========================================================
+  function cleanupWordsForMath(text) {
+    let clean = ' ' + text.toLowerCase() + ' ';
+    clean = clean.replace(/\bwhat is\b|\bcalculate\b|\bsolve\b|\bequals\b/g, ' ');
+    clean = clean.replace(/square root of ([\w.]+)/g, 'sqrt($1)');
+    clean = clean.replace(/([\w.]+) squared/g, '($1)^2');
+    clean = clean.replace(/to the power of/g, '^');
+    clean = clean.replace(/\bplus\b/g, '+');
+    clean = clean.replace(/\bminus\b/g, '-');
+    clean = clean.replace(/\btimes\b|\bmultiplied by\b/g, '*');
+    clean = clean.replace(/\bdivided by\b|\bover\b/g, '/');
+    return clean.trim();
+  }
+
+  function drawMathFunction(canvas, rawExpression) {
+    const ctx = canvas.getContext('2d');
+    const w = canvas.width, h = canvas.height;
+    ctx.clearRect(0,0,w,h);
+    ctx.fillStyle = 'rgba(2,6,10,0.92)';
+    ctx.fillRect(0,0,w,h);
+
+    const rangeX = 10, rangeY = 10;
+    const scaleX = w / (rangeX * 2);
+    const scaleY = h / (rangeY * 2);
+
+    // Draw central grids
+    ctx.strokeStyle = 'rgba(79, 216, 255, 0.15)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(0, h/2); ctx.lineTo(w, h/2);
+    ctx.moveTo(w/2, 0); ctx.lineTo(w/2, h);
+    ctx.stroke();
+
+    let compiled;
+    try {
+      compiled = math.compile(rawExpression);
+    } catch(err) {
+      return false;
+    }
+
+    ctx.strokeStyle = getComputedStyle(document.body).getPropertyValue('--cyan-bright').trim() || '#a9f3ff';
+    ctx.lineWidth = 2.5;
+    ctx.shadowBlur = 10;
+    ctx.shadowColor = 'rgba(79, 216, 255, 0.8)';
+    ctx.beginPath();
+
+    let hasStarted = false;
+    for (let px = 0; px <= w; px++) {
+      const x = (px - w/2) / scaleX;
+      let y;
+      try {
+        y = compiled.evaluate({ x });
+      } catch(e) { y = null; }
+
+      if (typeof y !== 'number' || !isFinite(y)) {
+        hasStarted = false;
+        continue;
+      }
+
+      const py = h/2 - (y * scaleY);
+      if (!hasStarted) {
+        ctx.moveTo(px, py);
+        hasStarted = true;
+      } else {
+        ctx.lineTo(px, py);
+      }
+    }
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+    return true;
+  }
+
+  // =========================================================
+  // SPOTIFY: PKCE DEVELOPMENT FLOW
+  // =========================================================
+  function genRandomString(len){
+    const list = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    let s = '';
+    const buffer = crypto.getRandomValues(new Uint8Array(len));
+    buffer.forEach(b => s += list[b % list.length]);
+    return s;
+  }
+  function base64Encode(buffer){
+    let s = '';
+    const bytes = new Uint8Array(buffer);
+    for(let i=0; i<bytes.byteLength; i++) s += String.fromCharCode(bytes[i]);
+    return btoa(s).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+  }
+  async function genChallenge(verifier){
+    const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier));
+    return base64Encode(digest);
+  }
+
+  async function linkSpotifyAccount(){
+    if (!CONFIG.SPOTIFY_CLIENT_ID) {
+      alert('Spotify Client ID is required. Insert it into the HUD settings panel.');
+      return;
+    }
+    const verifier = genRandomString(64);
+    localStorage.setItem('spotify_verifier', verifier);
+    const challenge = await genChallenge(verifier);
+    const params = new URLSearchParams({
+      client_id: CONFIG.SPOTIFY_CLIENT_ID,
+      response_type: 'code',
+      redirect_uri: SPOTIFY_REDIRECT_URI,
+      scope: SPOTIFY_SCOPES,
+      code_challenge_method: 'S256',
+      code_challenge: challenge
+    });
+    window.location = 'https://accounts.spotify.com/authorize?' + params.toString();
+  }
+
+  async function handleSpotifyAuthRedirect(){
+    const urlParams = new URLSearchParams(window.location.search);
+    const code = urlParams.get('code');
+    if (!code) return;
+    const verifier = localStorage.getItem('spotify_verifier');
+    try {
+      const body = new URLSearchParams({
+        client_id: CONFIG.SPOTIFY_CLIENT_ID,
+        grant_type: 'authorization_code',
+        code,
+        redirect_uri: SPOTIFY_REDIRECT_URI,
+        code_verifier: verifier
+      });
+      const res = await fetch('https://accounts.spotify.com/api/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body
+      });
+      const data = await res.json();
+      if (data.access_token) {
+        localStorage.setItem('spotify_access_token', data.access_token);
+        if (data.refresh_token) localStorage.setItem('spotify_refresh_token', data.refresh_token);
+        localStorage.setItem('spotify_expires_at', String(Date.now() + (data.expires_in || 3600) * 1000));
+        window.history.replaceState({}, document.title, window.location.pathname);
+        updateSpotifyStatus(true);
+      }
+    } catch(e){}
+  }
+
+  function updateSpotifyStatus(connected){
+    spotifyStatusEl.textContent = connected ? 'CONNECTED' : 'DISCONNECTED';
+    spotifyBtn.textContent = connected ? 'Spotify Linked' : 'Spotify Link';
+    spotifyBtn.classList.toggle('active', connected);
+  }
+
+  async function refreshSpotifyToken(){
+    const refresh = localStorage.getItem('spotify_refresh_token');
+    if (!refresh || !CONFIG.SPOTIFY_CLIENT_ID) return null;
+    try {
+      const body = new URLSearchParams({
+        grant_type: 'refresh_token',
+        refresh_token: refresh,
+        client_id: CONFIG.SPOTIFY_CLIENT_ID
+      });
+      const res = await fetch('https://accounts.spotify.com/api/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body
+      });
+      const data = await res.json();
+      if (data.access_token) {
+        localStorage.setItem('spotify_access_token', data.access_token);
+        return data.access_token;
+      }
+    } catch(e){}
+    return null;
+  }
+
+  async function retrieveActiveSpotifyToken(){
+    const token = localStorage.getItem('spotify_access_token');
+    const expires = parseInt(localStorage.getItem('spotify_expires_at') || '0', 10);
+    if (token && Date.now() < expires - 5000) return token;
+    return await refreshSpotifyToken();
+  }
+
+  async function runSpotifyAction(endpoint, method = 'PUT', payload = null){
+    const token = await retrieveActiveSpotifyToken();
+    if (!token) throw new Error('not_linked');
+    return fetch('https://api.spotify.com/v1' + endpoint, {
+      method,
+      headers: {
+        'Authorization': 'Bearer ' + token,
+        'Content-Type': 'application/json'
+      },
+      body: payload ? JSON.stringify(payload) : null
+    });
+  }
+
+  async function playMusic(searchQuery){
+    try {
+      if (searchQuery) {
+        const res = await runSpotifyAction(`/search?q=${encodeURIComponent(searchQuery)}&type=track&limit=1`, 'GET');
+        const data = await res.json();
+        const track = data.tracks && data.tracks.items && data.tracks.items[0];
+        if (!track) {
+          speak("I could not discover that song track in Spotify's libraries, sir.");
+          return;
+        }
+        await runSpotifyAction('/me/player/play', 'PUT', { uris: [track.uri] });
+        speak(`Playing ${track.name} by ${track.artists[0].name}, sir.`);
+        showNowPlaying(track);
+      } else {
+        await runSpotifyAction('/me/player/play', 'PUT');
+        speak("Resuming your master playlist, sir.");
+      }
+    } catch(e){
+      speak("To play, ensure Spotify is currently active on one of your local devices, sir.");
+    }
+  }
+
+  spotifyBtn.addEventListener('click', linkSpotifyAccount);
+
+  // =========================================================
+  // INTEGRATED COGNITIVE COMMAND MATRIX
+  // =========================================================
+  async function askAdvancedLLM(prompt) {
+    if (!CONFIG.LLM_API_KEY) return false;
+    try {
+      showPanelLoading("COGNITIVE RESOLUTION");
+      const res = await fetch(CONFIG.LLM_API_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${CONFIG.LLM_API_KEY}`
+        },
+        body: JSON.stringify({
+          model: CONFIG.LLM_MODEL,
+          messages: [
+            {
+              role: "system",
+              content: "You are J.A.R.V.I.S., Tony Stark's personal artificial intelligence system. Address the speaker as 'sir'. Keep replies articulate, polite, slightly dry, and under 3 sentences."
+            },
+            { role: "user", content: prompt }
+          ]
+        })
+      });
+      const data = await res.json();
+      if (data.choices && data.choices[0]) {
+        const response = data.choices[0].message.content;
+        resetPanel();
+        panelTitle.textContent = "COGNITIVE RESOLUTION";
+        panelText.textContent = response;
+        showPanel();
+        speak(response);
+        return true;
+      }
+    } catch(e){}
+    return false;
+  }
+
+  async function processCommand(text) {
+    Sound.beep(900, 0.05);
+    const t = text.toLowerCase().trim();
+
+    // System diagnostic checks
+    if (t.includes('status report') || t.includes('system scan') || t.includes('diagnostics')) {
+      speak("Diagnostics complete, sir. Matrix configurations are balanced, and the arc reactor output is nominal.");
+      return;
+    }
+
+    if (t.includes('power down') || t.includes('go to sleep')) {
+      speak("Powering down holographic arrays. Good night, sir.");
+      stopSpeechModule();
+      return;
+    }
+
+    if (t.includes('what time is it') || t.includes('tell me the time')) {
+      const now = new Date();
+      speak(`The time currently reads ${now.getHours()} ${now.getMinutes()}, sir.`);
+      return;
+    }
+
+    // Weather checks
+    if (t.includes('weather') || t.includes('forecast') || t.includes('temperature')) {
+      const match = t.match(/(?:for|in)\s+([a-zA-Z\s]+)/);
+      updateWeather(match ? match[1] : null);
+      return;
+    }
+
+    // Intercept Calendar queries first
+    const calendarIntercepted = interpretScheduleCommands(t);
+    if (calendarIntercepted) return;
+
+    // Spotify controls
+    if (t.startsWith('play music') || t.startsWith('play ')) {
+      const query = t.replace(/^play music|^play/g, '').replace('on spotify', '').trim();
+      playMusic(query || null);
+      return;
+    }
+    if (t === 'pause' || t.includes('pause music')) {
+      try { await runSpotifyAction('/me/player/pause', 'PUT'); speak("Audio stream paused."); } catch(e){}
+      return;
+    }
+    if (t.includes('skip song') || t.includes('next song') || t.includes('next track')) {
+      try { await runSpotifyAction('/me/player/next', 'POST'); speak("Skipping track."); } catch(e){}
+      return;
+    }
+
+    // Scientific graphing: "graph cos(x) * 1.5"
+    if (t.startsWith('graph ') || t.startsWith('plot ')) {
+      const funcString = t.replace(/^graph |^plot /g, '').trim();
+      const canvas = showPanelGraph(funcString);
+      const isDrawn = drawMathFunction(canvas, funcString);
+      if (isDrawn) speak("The mathematical curve has been projected on your side telemetry, sir.");
+      else speak("My apologies, that function formulation appears irregular.");
+      return;
+    }
+
+    // Scientific calculations / unit conversions
+    if (t.includes('convert') || t.includes('calculate') || t.includes('solve') || t.match(/\d+/)) {
+      const cleanMath = cleanupWordsForMath(t);
+      try {
+        const mathResult = math.evaluate(cleanMath);
+        if (mathResult !== undefined) {
+          const formatted = mathResult.toString();
+          showPanelMath(cleanMath, formatted);
+          speak(`The calculations yield ${formatted}, sir.`);
+          return;
+        }
+      } catch(e){}
+    }
+
+    // Wikipedia Knowledge telemetry query
+    const wikiMatch = t.match(/^(what is|who is|tell me about|define)\s+(.+)/);
+    if (wikiMatch) {
+      const querySubject = wikiMatch[2];
+      showPanelLoading(querySubject);
+      try {
+        let res = await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(querySubject)}`);
+        if (!res.ok) {
+          const searchRes = await fetch(`https://en.wikipedia.org/w/api.php?action=opensearch&search=${encodeURIComponent(querySubject)}&limit=1&format=json&origin=*`);
+          const searchData = await searchRes.json();
+          if (searchData[1] && searchData[1][0]) {
+            res = await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(searchData[1][0])}`);
+          }
+        }
+        const data = await res.json();
+        const outputText = data.extract || "No encyclopedia data logs on this file.";
+        showPanelArticle(data.title || querySubject, outputText, data.thumbnail ? data.thumbnail.source : null);
+        const speechSnippet = outputText.split('. ').slice(0,2).join('. ');
+        speak(speechSnippet);
+      } catch(e) {
+        speak("I cannot gather details on that subject from archival records, sir.");
+      }
+      return;
+    }
+
+    // Advanced Cognitive LLM Fallback (if key is set)
+    if (CONFIG.LLM_API_KEY) {
+      const answered = await askAdvancedLLM(text);
+      if (answered) return;
+    }
+
+    // Standard Greeting fallback
+    if (t.includes('hey jarvis') || t.includes('hello jarvis') || t === 'jarvis') {
+      speak("At your service, sir. All subsystems are ready.");
+      return;
+    }
+
+    // Fallback confusion response
+    speak("I am afraid that query is outside my designated vector paths, sir.");
+  }
+
+  // =========================================================
+  // SELF-HEALING CONTINUOUS MIC RECOGNITION
+  // =========================================================
+  let recognition = null;
+  let recognitionActive = false;
+  let wantsToListen = false;
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+  function buildSpeechEngine() {
+    const rec = new SpeechRecognition();
+    rec.continuous = true;
+    rec.interimResults = true;
+    rec.lang = 'en-US';
+
+    rec.onstart = () => {
+      recognitionActive = true;
+      voiceStatus.textContent = "ONLINE";
+      setStatus('listening');
+      activateBtn.textContent = "Deactivate Mic";
+      activateBtn.classList.add('active');
+    };
+
+    rec.onerror = (e) => {
+      if (e.error === 'not-allowed') {
+        wantsToListen = false;
+        voiceStatus.textContent = "MIC BLOCKED";
+      }
+    };
+
+    rec.onend = () => {
+      recognitionActive = false;
+      if (!wantsToListen) {
+        activateBtn.textContent = "Activate Voice";
+        activateBtn.classList.remove('active');
+        voiceStatus.textContent = "OFFLINE";
+        setStatus('standby');
+        return;
+      }
+      // Self-healing automatic reconnect
+      setTimeout(() => {
+        try { if (wantsToListen) recognition.start(); } catch(e){}
+      }, 400);
+    };
+
+    rec.onresult = (e) => {
+      let speechPhrase = '';
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        if (e.results[i].isFinal) speechPhrase += e.results[i][0].transcript;
+      }
+      if (speechPhrase) {
+        processCommand(speechPhrase);
+      }
+    };
+
+    return rec;
+  }
+
+  function startSpeechModule() {
+    if (!SpeechRecognition) {
+      voiceStatus.textContent = "UNSUPPORTED";
+      footnote.textContent = "This browser does not support local speech recognition parameters. Try Chrome/Edge.";
+      return;
+    }
+    wantsToListen = true;
+    recognition = buildSpeechEngine();
+    try { recognition.start(); } catch(e){}
+  }
+
+  function stopSpeechModule() {
+    wantsToListen = false;
+    if (recognition) recognition.stop();
+  }
+
+  // Audio stream visualizer link
+  let mediaStreamCtx = null;
+  async function connectVisualizer() {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaStreamCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const source = mediaStreamCtx.createMediaStreamSource(stream);
+      const analyser = mediaStreamCtx.createAnalyser();
+      analyser.fftSize = 64;
+      source.connect(analyser);
+      const values = new Uint8Array(analyser.frequencyBinCount);
+
+      function renderFrame() {
+        if (!mediaStreamCtx) return;
+        analyser.getByteFrequencyData(values);
+        bars.forEach((bar, index) => {
+          const raw = values[index % values.length] || 0;
+          const h = Math.max(4, (raw / 255) * 36);
+          bar.style.height = h + 'px';
+          bar.style.opacity = 0.4 + (raw / 255) * 0.6;
+        });
+        requestAnimationFrame(renderFrame);
+      }
+      renderFrame();
+    } catch(err){}
+  }
+
+  activateBtn.addEventListener('click', () => {
+    if (wantsToListen) {
+      stopSpeechModule();
+    } else {
+      startSpeechModule();
+      connectVisualizer();
+    }
+  });
+
+  testBtn.addEventListener('click', () => {
+    Sound.chime();
+    speak("Systems online. Primary security grids, energy matrix elements, and schedule structures are entirely loaded, sir.");
+  });
+
+  // LOWER TEXT INTERFACE BAR SUPPORT
+  function submitLowerConsoleInput(){
+    const text = textInput.value.trim();
+    if (!text) return;
+    textInput.value = '';
+    processCommand(text);
+  }
+  sendBtn.addEventListener('click', submitLowerConsoleInput);
+  textInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') submitLowerConsoleInput(); });
+
+  // Ambient visualizer physics
+  setInterval(() => {
+    if (!mediaStreamCtx) {
+      bars.forEach(b => {
+        b.style.height = (4 + Math.random() * 8) + 'px';
+        b.style.opacity = 0.35;
+      });
+    }
+  }, 350);
+
+  // =========================================================
+  // INTEGRATED PARAMETERS MODAL (DEPLOY MATRIX)
+  // =========================================================
+  function switchHUDTheme(th) {
+    document.body.setAttribute('data-theme', th);
+  }
+
+  settingsBtn.addEventListener('click', () => {
+    Sound.beep(750, 0.08);
+    document.getElementById('themeSelect').value = CONFIG.THEME;
+    document.getElementById('cfgPitch').value = CONFIG.VOICE_PITCH;
+    document.getElementById('cfgRate').value = CONFIG.VOICE_RATE;
+    document.getElementById('cfgPlannerUrl').value = CONFIG.PLANNER_URL;
+    document.getElementById('cfgLlmKey').value = CONFIG.LLM_API_KEY;
+    document.getElementById('cfgLlmUrl').value = CONFIG.LLM_API_URL;
+    document.getElementById('cfgElevenKey').value = CONFIG.ELEVEN_LABS_API_KEY;
+    document.getElementById('cfgSpotifyId').value = CONFIG.SPOTIFY_CLIENT_ID;
+    document.getElementById('cfgSoundFx').value = String(CONFIG.SOUND_FX);
+    populateVoices();
+    document.getElementById('settingsModal').classList.add('active');
+  });
+
+  document.getElementById('closeConfigBtn').addEventListener('click', () => {
+    document.getElementById('settingsModal').classList.remove('active');
+  });
+
+  document.getElementById('saveConfigBtn').addEventListener('click', () => {
+    CONFIG.THEME = document.getElementById('themeSelect').value;
+    CONFIG.VOICE_NAME = document.getElementById('voiceSelect').value;
+    CONFIG.VOICE_PITCH = parseFloat(document.getElementById('cfgPitch').value) || 0.9;
+    CONFIG.VOICE_RATE = parseFloat(document.getElementById('cfgRate').value) || 0.95;
+    CONFIG.PLANNER_URL = document.getElementById('cfgPlannerUrl').value.trim() || DEFAULT_CONFIG.PLANNER_URL;
+    CONFIG.LLM_API_KEY = document.getElementById('cfgLlmKey').value.trim();
+    CONFIG.LLM_API_URL = document.getElementById('cfgLlmUrl').value.trim() || DEFAULT_CONFIG.LLM_API_URL;
+    CONFIG.ELEVEN_LABS_API_KEY = document.getElementById('cfgElevenKey').value.trim();
+    CONFIG.SPOTIFY_CLIENT_ID = document.getElementById('cfgSpotifyId').value.trim();
+    CONFIG.SOUND_FX = document.getElementById('cfgSoundFx').value === 'true';
+
+    localStorage.setItem('jarvis_config_v6', JSON.stringify(CONFIG));
+    switchHUDTheme(CONFIG.THEME);
+    aiStatus.textContent = CONFIG.LLM_API_KEY ? 'NEURAL LLM' : 'BUILT-IN';
+    plannerFrame.src = CONFIG.PLANNER_URL;
+    document.getElementById('settingsModal').classList.remove('active');
+    
+    Sound.chime();
+    speak("Subsystem parameters updated and deployed, sir.");
+  });
+
+  // =========================================================
+  // BOOT SEQUENCE INITIALIZATION
+  // =========================================================
+  (async function startMatrixBoot(){
+    switchHUDTheme(CONFIG.THEME || 'classic');
+    aiStatus.textContent = CONFIG.LLM_API_KEY ? 'NEURAL LLM' : 'BUILT-IN';
+    
+    if (localStorage.getItem('spotify_access_token')) {
+      updateSpotifyStatus(true);
+    }
+    await handleSpotifyAuthRedirect();
+
+    // Check mic permission states to auto-enable
+    if (navigator.permissions && navigator.permissions.query) {
+      try {
+        const state = await navigator.permissions.query({ name: 'microphone' });
+        if (state.state === 'granted') {
+          startSpeechModule();
+          connectVisualizer();
+        }
+      } catch(e){}
+    }
+
+    // Auto-sync schedule phases after boot
+    setTimeout(performUnbreakablePlannerSync, 3500);
+  })();
 </script>
 </body>
-  <!-- ========================================== -->
-<!-- J.A.R.V.I.S. AUTOMATIC SYNC BRIDGE        -->
-<!-- ========================================== -->
-<script>
-  window.addEventListener('message', (event) => {
-    try {
-      let data = event.data;
-      if (typeof data === 'string') {
-        data = JSON.parse(data);
-      }
-
-      if (data && data.type === 'jarvis-request-events') {
-        const events = [];
-
-        // 1. Search localStorage for saved planner data
-        for (let i = 0; i < localStorage.length; i++) {
-          const key = localStorage.key(i);
-          try {
-            const rawVal = localStorage.getItem(key);
-            const parsed = JSON.parse(rawVal);
-
-            if (Array.isArray(parsed)) {
-              parsed.forEach((item) => {
-                if (typeof item === 'object') {
-                  events.push({
-                    day: item.day || item.weekday || key || 'Monday',
-                    time: item.time || '',
-                    title: item.title || item.task || item.text || 'Untitled Task',
-                    desc: item.desc || item.notes || ''
-                  });
-                } else if (typeof item === 'string' && item.trim()) {
-                  events.push({
-                    day: key,
-                    title: item.trim(),
-                    time: '',
-                    desc: ''
-                  });
-                }
-              });
-            } else if (typeof parsed === 'object' && parsed !== null) {
-              Object.keys(parsed).forEach((dayKey) => {
-                const dayItems = parsed[dayKey];
-                if (Array.isArray(dayItems)) {
-                  dayItems.forEach((task) => {
-                    events.push({
-                      day: dayKey,
-                      title: typeof task === 'string' ? task : (task.title || task.text || 'Task'),
-                      time: task.time || '',
-                      desc: task.desc || ''
-                    });
-                  });
-                }
-              });
-            }
-          } catch (e) {
-            // Not JSON, continue checking
-          }
-        }
-
-        // 2. Fallback: If no localStorage, scrape rendered DOM text/cards
-        if (events.length === 0) {
-          const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
-          document.querySelectorAll('div, section, td, th, li').forEach((el) => {
-            const text = el.innerText ? el.innerText.trim() : '';
-            const matchDay = days.find((d) => el.className.toLowerCase().includes(d) || el.id.toLowerCase().includes(d));
-            if (matchDay && text.length > 2 && text.length < 150) {
-              events.push({
-                day: matchDay.charAt(0).toUpperCase() + matchDay.slice(1),
-                title: text,
-                time: '',
-                desc: ''
-              });
-            }
-          });
-        }
-
-        // 3. Send the schedule back to JARVIS
-        event.source.postMessage(JSON.stringify({
-          type: 'jarvis-events',
-          events: events
-        }), '*');
-      }
-    } catch (err) {
-      console.warn('JARVIS Bridge error:', err);
-    }
-  });
-</script>
 </html>
