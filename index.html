@@ -3,32 +3,59 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>J.A.R.V.I.S.</title>
+<title>J.A.R.V.I.S. // Mark-IV HUD</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/12.4.0/math.min.js"></script>
 <style>
   :root{
-    --bg-deep:#03080d;
-    --bg-panel:#071823;
-    --cyan:#4fd8ff;
-    --cyan-bright:#a9f3ff;
-    --cyan-dim:#1b4965;
-    --text-dim:#5f92a8;
-    --amber:#ffb454;
-    --danger:#ff5b5b;
-    --spotify:#1db954;
+    --bg-deep: #03080d;
+    --bg-panel: rgba(7, 24, 35, 0.92);
+    --cyan: #4fd8ff;
+    --cyan-bright: #a9f3ff;
+    --cyan-dim: #1b4965;
+    --cyan-glow: rgba(79, 216, 255, 0.4);
+    --text-dim: #5f92a8;
+    --amber: #ffb454;
+    --danger: #ff5b5b;
+    --spotify: #1db954;
+    --theme-accent: #4fd8ff;
   }
 
-  *{box-sizing:border-box; margin:0; padding:0;}
+  [data-theme="gold"] {
+    --cyan: #ffd166;
+    --cyan-bright: #fff3b0;
+    --cyan-dim: #795e1e;
+    --cyan-glow: rgba(255, 209, 102, 0.4);
+    --text-dim: #a6915c;
+    --theme-accent: #ffd166;
+  }
+  [data-theme="emerald"] {
+    --cyan: #06d6a0;
+    --cyan-bright: #b7ffeb;
+    --cyan-dim: #105944;
+    --cyan-glow: rgba(6, 214, 160, 0.4);
+    --text-dim: #4d937f;
+    --theme-accent: #06d6a0;
+  }
+  [data-theme="crimson"] {
+    --cyan: #ff4d6d;
+    --cyan-bright: #ffccd5;
+    --cyan-dim: #6c1827;
+    --cyan-glow: rgba(255, 77, 109, 0.4);
+    --text-dim: #a35d6a;
+    --theme-accent: #ff4d6d;
+  }
 
-  html,body{
+  *{ box-sizing:border-box; margin:0; padding:0; user-select:none; }
+
+  html, body{
     width:100%; height:100%;
-    background:
-      radial-gradient(ellipse at center, #061219 0%, #020508 75%, #000000 100%);
+    background: radial-gradient(ellipse at center, #061219 0%, #020508 75%, #000000 100%);
     overflow:hidden;
     font-family:'Share Tech Mono', monospace;
     color:var(--cyan);
+    transition: color 0.4s ease;
   }
 
   body{
@@ -38,29 +65,31 @@
     position:relative;
   }
 
+  /* Grid & HUD scanlines */
   .grid-overlay{
     position:absolute; inset:0;
     background-image:
       linear-gradient(rgba(79,216,255,0.035) 1px, transparent 1px),
       linear-gradient(90deg, rgba(79,216,255,0.035) 1px, transparent 1px);
-    background-size: 42px 42px;
+    background-size: 44px 44px;
     pointer-events:none;
-    mask-image: radial-gradient(ellipse at center, black 0%, transparent 75%);
+    mask-image: radial-gradient(ellipse at center, black 0%, transparent 80%);
   }
 
   .scanline{
     position:absolute; left:0; right:0; height:2px;
-    background: linear-gradient(90deg, transparent, rgba(79,216,255,0.5), transparent);
-    animation: sweep 6s linear infinite;
+    background: linear-gradient(90deg, transparent, var(--cyan-glow), transparent);
+    animation: sweep 7s linear infinite;
     pointer-events:none;
   }
   @keyframes sweep{
     0%{ top:0%; opacity:0; }
-    5%{ opacity:1; }
-    95%{ opacity:1; }
+    5%{ opacity:0.8; }
+    95%{ opacity:0.8; }
     100%{ top:100%; opacity:0; }
   }
 
+  /* Corner Brackets & Telemetry */
   .corner{
     position:absolute;
     font-size:11px;
@@ -68,37 +97,40 @@
     color:var(--text-dim);
     line-height:1.6;
     z-index:5;
-    max-width:220px;
+    max-width:260px;
   }
   .corner span, .corner b{ color:var(--cyan); font-weight:normal; }
-  .top-left{ top:28px; left:28px; }
-  .top-right{ top:28px; right:28px; text-align:right; }
+  .top-left{ top:24px; left:28px; }
+  .top-right{ top:24px; right:28px; text-align:right; }
   .bottom-left{ bottom:28px; left:28px; }
   .bottom-right{ bottom:28px; right:28px; text-align:right; }
 
   .corner-bracket{
-    position:absolute; width:26px; height:26px; z-index:5;
+    position:absolute; width:24px; height:24px; z-index:5;
     border:1.5px solid var(--cyan-dim);
-    opacity:0.8;
+    opacity:0.85;
   }
   .cb-tl{ top:10px; left:10px; border-right:none; border-bottom:none; }
   .cb-tr{ top:10px; right:10px; border-left:none; border-bottom:none; }
   .cb-bl{ bottom:10px; left:10px; border-right:none; border-top:none; }
   .cb-br{ bottom:10px; right:10px; border-left:none; border-top:none; }
 
+  /* Audio Waveform */
   .waveform{
-    display:flex; align-items:flex-end; gap:3px; height:28px; margin-top:8px;
+    display:flex; align-items:flex-end; gap:2.5px; height:28px; margin-top:8px;
   }
   .waveform .bar{
     width:3px; background:var(--cyan);
     height:4px; opacity:0.6;
     transition:height 0.08s ease, background 0.2s ease;
+    border-radius:1px;
   }
 
+  /* Center Hologram Core */
   .core{
     position:relative;
-    width:min(66vmin, 460px);
-    height:min(66vmin, 460px);
+    width:min(66vmin, 440px);
+    height:min(66vmin, 440px);
     display:flex; align-items:center; justify-content:center;
   }
 
@@ -106,67 +138,64 @@
     position:absolute;
     border-radius:50%;
     top:50%; left:50%;
+    pointer-events:none;
   }
 
   .ring-outer-dash{
     width:100%; height:100%;
     transform:translate(-50%,-50%);
-    animation: spin 42s linear infinite;
+    animation: spin 45s linear infinite;
   }
   .ring-ticks{
     width:88%; height:88%;
     transform:translate(-50%,-50%);
-    animation: spin-rev 30s linear infinite;
-    background:
-      repeating-conic-gradient(
-        var(--cyan-dim) 0deg 1.2deg,
-        transparent 1.2deg 9deg
-      );
+    animation: spin-rev 32s linear infinite;
+    background: repeating-conic-gradient(var(--cyan-dim) 0deg 1.2deg, transparent 1.2deg 9deg);
     -webkit-mask: radial-gradient(circle, transparent 96%, black 97%, black 100%, transparent 100.5%);
     mask: radial-gradient(circle, transparent 96%, black 97%, black 100%, transparent 100.5%);
     opacity:0.85;
-    border-radius:50%;
   }
   .ring-mid-dash{
-    width:70%; height:70%;
+    width:72%; height:72%;
     transform:translate(-50%,-50%);
-    animation: spin 18s linear infinite;
+    animation: spin 20s linear infinite;
   }
   .ring-inner-thin{
     width:56%; height:56%;
     transform:translate(-50%,-50%);
     border:1px solid rgba(79,216,255,0.35);
-    box-shadow: 0 0 12px rgba(79,216,255,0.15) inset;
+    box-shadow: 0 0 12px var(--cyan-glow) inset;
+    transition: all 0.3s ease;
   }
 
   .ring-inner-thin.pulse-listen{
     animation: ring-pulse 1.4s ease-in-out infinite;
-    border-color: rgba(79,216,255,0.8);
+    border-color: var(--cyan);
   }
   .ring-inner-thin.pulse-speak{
     animation: ring-pulse-amber 0.9s ease-in-out infinite;
-    border-color: rgba(255,180,84,0.85);
+    border-color: var(--amber);
   }
   @keyframes ring-pulse{
-    0%,100%{ box-shadow:0 0 12px rgba(79,216,255,0.15) inset, 0 0 0 rgba(79,216,255,0); }
-    50%{ box-shadow:0 0 22px rgba(79,216,255,0.4) inset, 0 0 24px rgba(79,216,255,0.25); }
+    0%,100%{ box-shadow:0 0 12px var(--cyan-glow) inset, 0 0 0 rgba(79,216,255,0); }
+    50%{ box-shadow:0 0 24px var(--cyan-glow) inset, 0 0 28px var(--cyan-glow); }
   }
   @keyframes ring-pulse-amber{
-    0%,100%{ box-shadow:0 0 12px rgba(255,180,84,0.2) inset, 0 0 0 rgba(255,180,84,0); }
-    50%{ box-shadow:0 0 26px rgba(255,180,84,0.5) inset, 0 0 28px rgba(255,180,84,0.3); }
+    0%,100%{ box-shadow:0 0 12px rgba(255,180,84,0.2) inset; }
+    50%{ box-shadow:0 0 28px rgba(255,180,84,0.6) inset, 0 0 32px rgba(255,180,84,0.4); }
   }
 
   .orbit{
     width:100%; height:100%;
     transform:translate(-50%,-50%);
-    animation: spin 9s linear infinite;
+    animation: spin 10s linear infinite;
   }
   .orbit .dot{
     position:absolute; top:0; left:50%;
     width:6px; height:6px; margin-left:-3px;
     border-radius:50%;
     background:var(--cyan-bright);
-    box-shadow:0 0 8px 2px var(--cyan-bright);
+    box-shadow:0 0 10px 2px var(--cyan-bright);
   }
 
   @keyframes spin{ from{ transform:translate(-50%,-50%) rotate(0deg);} to{ transform:translate(-50%,-50%) rotate(360deg);} }
@@ -184,130 +213,164 @@
   .center-text{
     position:relative; z-index:4;
     text-align:center;
-    width:64%;
+    width:70%;
   }
   .title{
     font-family:'Orbitron', sans-serif;
-    font-weight:700;
-    font-size:clamp(16px, 2.6vmin, 26px);
+    font-weight:900;
+    font-size:clamp(18px, 2.8vmin, 28px);
     letter-spacing:6px;
     color:var(--cyan-bright);
     text-shadow:
-      0 0 8px rgba(169,243,255,0.8),
-      0 0 24px rgba(79,216,255,0.5),
-      0 0 48px rgba(79,216,255,0.25);
+      0 0 10px var(--cyan-glow),
+      0 0 28px var(--cyan-glow);
     animation: pulse-glow 3.4s ease-in-out infinite;
   }
-  @keyframes pulse-glow{
-    0%,100%{ opacity:1; }
-    50%{ opacity:0.75; }
-  }
+  @keyframes pulse-glow{ 0%,100%{ opacity:1; } 50%{ opacity:0.8; } }
+  
   .subtitle{
     margin-top:8px;
     font-size:10px;
     letter-spacing:4px;
     color:var(--text-dim);
     transition: color 0.4s ease;
-    min-height:13px;
+    min-height:14px;
   }
-  .subtitle.listening{ color:var(--cyan); animation: blink 1.2s ease-in-out infinite; }
+  .subtitle.listening{ color:var(--cyan-bright); animation: blink 1.2s ease-in-out infinite; }
   .subtitle.speaking{ color:var(--amber); }
-  @keyframes blink{ 0%,100%{opacity:1;} 50%{opacity:0.4;} }
+  @keyframes blink{ 0%,100%{opacity:1;} 50%{opacity:0.35;} }
 
   .caption{
     margin-top:8px;
-    font-size:9.5px;
+    font-size:10px;
     letter-spacing:1px;
-    color:rgba(169,243,255,0.75);
-    min-height:13px;
-    max-width:94%;
+    color:var(--cyan-bright);
+    min-height:14px;
+    max-width:96%;
     margin-left:auto; margin-right:auto;
+    text-shadow: 0 0 6px var(--cyan-glow);
   }
 
   .hint{
-    margin-top:12px;
-    font-size:8px;
+    margin-top:14px;
+    font-size:8.5px;
     letter-spacing:1.1px;
-    color:rgba(95,146,168,0.5);
+    color:rgba(95,146,168,0.6);
     line-height:1.7;
   }
 
-  .controls{
+  /* HUD Buttons and Console Input */
+  .hud-console{
     position:absolute;
-    bottom:74px;
+    bottom:68px;
     left:50%;
     transform:translateX(-50%);
     display:flex;
+    flex-direction:column;
+    align-items:center;
     gap:10px;
-    z-index:5;
+    z-index:6;
+    max-width:92vw;
+    width:560px;
+  }
+
+  .input-bar{
+    display:flex;
+    width:100%;
+    background:rgba(7,24,35,0.75);
+    border:1px solid var(--cyan-dim);
+    box-shadow:0 0 15px rgba(0,0,0,0.5);
+  }
+  .input-bar input{
+    flex:1;
+    background:transparent;
+    border:none;
+    outline:none;
+    color:var(--cyan-bright);
+    font-family:'Share Tech Mono', monospace;
+    font-size:12px;
+    padding:8px 12px;
+    letter-spacing:1px;
+  }
+  .input-bar input::placeholder{ color:rgba(95,146,168,0.5); }
+  .input-bar button{
+    background:rgba(79,216,255,0.1);
+    border:none;
+    border-left:1px solid var(--cyan-dim);
+    color:var(--cyan);
+    font-family:'Share Tech Mono', monospace;
+    font-size:11px;
+    padding:0 14px;
+    cursor:pointer;
+    transition:0.2s;
+  }
+  .input-bar button:hover{ background:var(--cyan-glow); color:#fff; }
+
+  .controls{
+    display:flex;
+    gap:8px;
     flex-wrap:wrap;
     justify-content:center;
-    max-width:90vw;
   }
   .hud-btn{
     background:rgba(79,216,255,0.06);
     border:1px solid var(--cyan-dim);
     color:var(--cyan);
     font-family:'Share Tech Mono', monospace;
-    font-size:10.5px;
+    font-size:10px;
     letter-spacing:1.5px;
-    padding:9px 16px;
+    padding:7px 14px;
     cursor:pointer;
     transition: all 0.2s ease;
     text-transform:uppercase;
     white-space:nowrap;
   }
   .hud-btn:hover{
-    background:rgba(79,216,255,0.15);
+    background:rgba(79,216,255,0.18);
     border-color:var(--cyan);
-    box-shadow:0 0 14px rgba(79,216,255,0.3);
+    box-shadow:0 0 14px var(--cyan-glow);
   }
   .hud-btn:active{ transform:scale(0.97); }
   .hud-btn.active{
     background:rgba(79,216,255,0.25);
     color:var(--cyan-bright);
-    box-shadow:0 0 18px rgba(79,216,255,0.4);
+    box-shadow:0 0 18px var(--cyan-glow);
   }
   .hud-btn.spotify-btn{
-    border-color:rgba(29,185,84,0.5);
+    border-color:rgba(29,185,84,0.4);
     color:var(--spotify);
   }
   .hud-btn.spotify-btn:hover{
     border-color:var(--spotify);
-    box-shadow:0 0 14px rgba(29,185,84,0.35);
-  }
-  .hud-btn.spotify-btn.active{
-    background:rgba(29,185,84,0.2);
-    color:#7cf0a3;
-    box-shadow:0 0 18px rgba(29,185,84,0.4);
+    box-shadow:0 0 14px rgba(29,185,84,0.4);
   }
 
   .footnote{
     position:absolute;
-    bottom:24px;
+    bottom:14px;
     left:50%;
     transform:translateX(-50%);
     font-size:8.5px;
     letter-spacing:0.8px;
-    color:rgba(95,146,168,0.45);
+    color:rgba(95,146,168,0.5);
     text-align:center;
-    width:88%;
-    max-width:520px;
+    width:90%;
+    max-width:540px;
     z-index:5;
-    line-height:1.6;
   }
 
+  /* Data Panel */
   .data-panel{
     position:absolute;
     top:50%;
     right:24px;
-    transform:translateY(-50%) translateX(24px);
-    width:280px;
-    max-height:70vh;
+    transform:translateY(-50%) translateX(30px);
+    width:300px;
+    max-height:75vh;
     overflow-y:auto;
-    background:rgba(7,24,35,0.88);
+    background:var(--bg-panel);
     border:1px solid var(--cyan-dim);
-    box-shadow:0 0 24px rgba(79,216,255,0.15);
+    box-shadow:0 0 24px rgba(0,0,0,0.8), 0 0 12px var(--cyan-glow);
     padding:16px;
     z-index:6;
     opacity:0;
@@ -325,7 +388,7 @@
     letter-spacing:2px;
     color:var(--cyan-bright);
     border-bottom:1px solid var(--cyan-dim);
-    padding-bottom:8px;
+    padding-bottom:6px;
     margin-bottom:10px;
   }
   .panel-img{
@@ -334,20 +397,20 @@
     object-fit:cover;
     margin-bottom:10px;
     display:none;
-    filter:saturate(0.6) brightness(0.95);
+    filter:saturate(0.7) brightness(0.95);
     border:1px solid var(--cyan-dim);
   }
   .panel-text{
     font-size:11px;
     line-height:1.6;
     color:var(--text-dim);
-    letter-spacing:0.3px;
+    letter-spacing:0.4px;
   }
   .panel-big-result{
     font-family:'Orbitron', sans-serif;
-    font-size:26px;
+    font-size:24px;
     color:var(--cyan-bright);
-    text-shadow:0 0 12px rgba(169,243,255,0.6);
+    text-shadow:0 0 12px var(--cyan-glow);
     margin:6px 0;
     display:none;
   }
@@ -355,27 +418,104 @@
     width:100%;
     height:auto;
     display:none;
-    margin-top:6px;
+    margin-top:8px;
+    border:1px solid rgba(79,216,255,0.2);
   }
 
-  @media (max-width: 720px){
+  /* Timers Container inside HUD */
+  .timer-card{
+    background: rgba(79,216,255,0.06);
+    border: 1px solid var(--cyan-dim);
+    padding: 8px 10px;
+    margin-top: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .timer-val{
+    font-family:'Orbitron', sans-serif;
+    color:var(--amber);
+    font-size:16px;
+  }
+
+  /* Modal / Drawer for Settings */
+  .settings-modal{
+    position:fixed;
+    inset:0;
+    background:rgba(2,5,8,0.85);
+    backdrop-filter:blur(6px);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    z-index:99;
+    opacity:0;
+    pointer-events:none;
+    transition: opacity 0.3s ease;
+  }
+  .settings-modal.active{
+    opacity:1;
+    pointer-events:auto;
+  }
+  .settings-box{
+    width:min(90vw, 480px);
+    background:var(--bg-panel);
+    border:1px solid var(--cyan);
+    box-shadow:0 0 35px var(--cyan-glow);
+    padding:22px;
+    color:var(--cyan);
+  }
+  .settings-box h2{
+    font-family:'Orbitron', sans-serif;
+    font-size:15px;
+    letter-spacing:2px;
+    border-bottom:1px solid var(--cyan-dim);
+    padding-bottom:8px;
+    margin-bottom:14px;
+    color:var(--cyan-bright);
+  }
+  .setting-group{ margin-bottom:12px; }
+  .setting-group label{
+    display:block;
+    font-size:10px;
+    letter-spacing:1px;
+    color:var(--text-dim);
+    margin-bottom:4px;
+  }
+  .setting-group input, .setting-group select{
+    width:100%;
+    background:rgba(3,8,13,0.8);
+    border:1px solid var(--cyan-dim);
+    color:var(--cyan-bright);
+    font-family:'Share Tech Mono', monospace;
+    font-size:11px;
+    padding:7px 10px;
+    outline:none;
+  }
+  .setting-group input:focus{ border-color:var(--cyan); }
+  .modal-actions{
+    display:flex;
+    justify-content:flex-end;
+    gap:10px;
+    margin-top:18px;
+  }
+
+  @media (max-width: 768px){
     .data-panel{
       right:50%;
       top:auto;
-      bottom:190px;
-      transform:translateX(50%) translateY(10px);
-      width:80%;
-      max-width:320px;
+      bottom:170px;
+      transform:translateX(50%) translateY(20px);
+      width:88%;
+      max-width:340px;
     }
     .data-panel.visible{ transform:translateX(50%) translateY(0); }
-  }
-
-  @media (prefers-reduced-motion: reduce){
-    *{ animation:none !important; }
+    .corner.top-left{ top:15px; left:15px; }
+    .corner.top-right{ top:15px; right:15px; }
+    .hud-console{ bottom:54px; width:92%; }
   }
 </style>
 </head>
-<body>
+<body data-theme="classic">
 
   <div class="grid-overlay"></div>
   <div class="scanline"></div>
@@ -386,20 +526,27 @@
   <div class="corner-bracket cb-br"></div>
 
   <div class="corner top-left">
-    SYSTEM STATUS<br><span id="sysStatus">ONLINE</span>
+    SYSTEM STATUS<br><span id="sysStatus">ALL SYSTEMS NOMINAL</span><br>
+    ARC REACTOR: <span id="powerLevel">100% [3.2 GJ/s]</span>
   </div>
+  
   <div class="corner top-right">
-    LOCAL TIME<br><span id="clock">--:--:--</span>
+    LOCAL TIME<br><span id="clock">--:--:--</span><br>
+    ATMOSPHERE: <span id="weatherBadge">SCANNING...</span>
   </div>
+  
   <div class="corner bottom-left">
-    AUDIO INPUT
+    AUDIO TELEMETRY
     <div class="waveform" id="waveform"></div>
   </div>
+
   <div class="corner bottom-right">
-    VOICE MODULE<br><span id="voiceStatus">INITIALIZING</span><br>
-    SPOTIFY<br><span id="spotifyStatus">NOT CONNECTED</span>
+    VOICE ENGINE: <span id="voiceStatus">INITIALIZING</span><br>
+    AI PROTOCOL: <span id="aiStatus">BUILT-IN</span><br>
+    SPOTIFY LINK: <span id="spotifyStatus">DISCONNECTED</span>
   </div>
 
+  <!-- Central Arc Hologram Core -->
   <div class="core">
     <div class="ring ring-outer-dash">
       <svg class="dash-circle" viewBox="0 0 100 100">
@@ -416,7 +563,6 @@
     </div>
 
     <div class="ring ring-inner-thin" id="innerRing"></div>
-
     <div class="ring orbit"><div class="dot"></div></div>
 
     <div class="center-text">
@@ -424,79 +570,195 @@
       <div class="subtitle" id="statusText">STANDBY</div>
       <div class="caption" id="caption"></div>
       <div class="hint">
-        &ldquo;HEY JARVIS&rdquo; &middot; &ldquo;WHAT IS THE EMPIRE STATE BUILDING&rdquo; &middot; &ldquo;GRAPH X SQUARED&rdquo;<br>
-        &ldquo;PLAY [SONG]&rdquo; &middot; &ldquo;PAUSE&rdquo; &middot; &ldquo;SKIP&rdquo; &middot; &ldquo;WHAT'S PLAYING&rdquo; &middot; &ldquo;GO TO SLEEP&rdquo;
+        &ldquo;HEY JARVIS&rdquo; &middot; &ldquo;WHAT'S THE WEATHER&rdquo; &middot; &ldquo;SET TIMER 3 MINS&rdquo;<br>
+        &ldquo;GRAPH SIN(X)&rdquo; &middot; &ldquo;PLAY AC/DC&rdquo; &middot; &ldquo;CONVERT 50 MILES TO KM&rdquo;
       </div>
     </div>
   </div>
 
+  <!-- Side Hologram Data Panel -->
   <div class="data-panel" id="dataPanel">
-    <div class="panel-title" id="panelTitle">DATA</div>
+    <div class="panel-title" id="panelTitle">TELEMETRY</div>
     <img class="panel-img" id="panelImg" alt="">
     <div class="panel-big-result" id="panelBig"></div>
     <canvas class="panel-canvas" id="panelCanvas" width="500" height="300"></canvas>
     <div class="panel-text" id="panelText"></div>
+    <div id="timersList"></div>
   </div>
 
-  <div class="controls">
-    <button class="hud-btn" id="activateBtn">Activate Voice</button>
-    <button class="hud-btn" id="testBtn">Test Greeting</button>
-    <button class="hud-btn spotify-btn" id="spotifyBtn">Connect Spotify</button>
+  <!-- Bottom Console & Controls -->
+  <div class="hud-console">
+    <div class="input-bar">
+      <input type="text" id="textInput" placeholder="ENTER VOICE COMMAND OR QUERY..." autocomplete="off">
+      <button id="sendBtn">EXECUTE</button>
+    </div>
+    <div class="controls">
+      <button class="hud-btn" id="activateBtn">Activate Voice</button>
+      <button class="hud-btn" id="testBtn">Test Greeting</button>
+      <button class="hud-btn spotify-btn" id="spotifyBtn">Spotify Link</button>
+      <button class="hud-btn" id="settingsBtn">HUD Config</button>
+    </div>
   </div>
 
   <div class="footnote" id="footnote">
-    Once you grant microphone access, JARVIS remembers it and resumes listening automatically on future visits.
+    J.A.R.V.I.S. Neural Core initialized. Web Speech & Web Audio active.
+  </div>
+
+  <!-- Settings Modal -->
+  <div class="settings-modal" id="settingsModal">
+    <div class="settings-box">
+      <h2>// J.A.R.V.I.S. CONFIGURATION</h2>
+      <div class="setting-group">
+        <label>HUD THEME</label>
+        <select id="themeSelect">
+          <option value="classic">Mark IV Classic (Cyan)</option>
+          <option value="gold">Arc Reactor Gold (Amber)</option>
+          <option value="emerald">Stealth Neon (Emerald)</option>
+          <option value="crimson">Hulkbuster (Crimson)</option>
+        </select>
+      </div>
+      <div class="setting-group">
+        <label>OPENAI / GROQ / LLM API KEY (OPTIONAL FOR ADVANCED AI)</label>
+        <input type="password" id="cfgLlmKey" placeholder="sk-...">
+      </div>
+      <div class="setting-group">
+        <label>LLM ENDPOINT URL</label>
+        <input type="text" id="cfgLlmUrl" placeholder="https://api.openai.com/v1/chat/completions">
+      </div>
+      <div class="setting-group">
+        <label>ELEVENLABS API KEY (OPTIONAL)</label>
+        <input type="password" id="cfgElevenKey" placeholder="xi-api-key">
+      </div>
+      <div class="setting-group">
+        <label>SPOTIFY CLIENT ID</label>
+        <input type="text" id="cfgSpotifyId" placeholder="Spotify App Client ID">
+      </div>
+      <div class="setting-group">
+        <label>PROCEDURAL SOUND FX</label>
+        <select id="cfgSoundFx">
+          <option value="true">ENABLED</option>
+          <option value="false">MUTED</option>
+        </select>
+      </div>
+      <div class="modal-actions">
+        <button class="hud-btn" id="saveConfigBtn">SAVE & CLOSE</button>
+        <button class="hud-btn" id="closeConfigBtn">CANCEL</button>
+      </div>
+    </div>
   </div>
 
 <script>
   // =========================================================
-  // CONFIG
+  // APP CONFIGURATION & STORAGE
   // =========================================================
-  const CONFIG = {
-    // ElevenLabs (optional, for a more natural voice). Leave blank to use browser voice.
+  const DEFAULT_CONFIG = {
     ELEVEN_LABS_API_KEY: "",
     ELEVEN_LABS_VOICE_ID: "612b878b113047d9a770c069c8b4fdfe",
     ELEVEN_LABS_MODEL: "eleven_turbo_v2",
-
-    // Spotify (optional, for voice-controlled playback).
-    // 1. Create a free app at https://developer.spotify.com/dashboard
-    // 2. Copy its Client ID below.
-    // 3. In the app's settings on Spotify's site, add the Redirect URI shown
-    //    next to the "Connect Spotify" button on this page (it's auto-detected).
-    SPOTIFY_CLIENT_ID: "a0875a2703aa404a9e34b2dca5ce7415"
+    SPOTIFY_CLIENT_ID: "a0875a2703aa404a9e34b2dca5ce7415",
+    LLM_API_KEY: "",
+    LLM_API_URL: "https://api.openai.com/v1/chat/completions",
+    LLM_MODEL: "gpt-3.5-turbo",
+    SOUND_FX: true,
+    THEME: "classic"
   };
+
+  let CONFIG = { ...DEFAULT_CONFIG };
+  try {
+    const saved = localStorage.getItem('jarvis_config');
+    if(saved) CONFIG = { ...CONFIG, ...JSON.parse(saved) };
+  } catch(e){}
+
   const SPOTIFY_REDIRECT_URI = window.location.origin + window.location.pathname;
   const SPOTIFY_SCOPES = "user-read-playback-state user-modify-playback-state user-read-currently-playing";
-  // =========================================================
 
-  // ---------- clock ----------
+  // =========================================================
+  // AUDIO FX SYNTHESIZER (ZERO-ASSET PROCEDURAL SOUNDS)
+  // =========================================================
+  let fxAudioCtx = null;
+  function getFxAudioContext(){
+    if(!fxAudioCtx){
+      fxAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if(fxAudioCtx.state === 'suspended') fxAudioCtx.resume();
+    return fxAudioCtx;
+  }
+
+  const SoundFX = {
+    beep(freq = 880, duration = 0.08, type = 'sine'){
+      if(!CONFIG.SOUND_FX) return;
+      try{
+        const ctx = getFxAudioContext();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, ctx.currentTime);
+        gain.gain.setValueAtTime(0.08, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + duration);
+      }catch(e){}
+    },
+    chime(){
+      if(!CONFIG.SOUND_FX) return;
+      [523.25, 659.25, 783.99, 1046.50].forEach((f, i) => {
+        setTimeout(() => this.beep(f, 0.12, 'sine'), i * 65);
+      });
+    },
+    alert(){
+      if(!CONFIG.SOUND_FX) return;
+      this.beep(880, 0.1, 'square');
+      setTimeout(() => this.beep(440, 0.15, 'sawtooth'), 120);
+    },
+    alarm(){
+      if(!CONFIG.SOUND_FX) return;
+      for(let i=0; i<3; i++){
+        setTimeout(() => {
+          this.beep(987.77, 0.15, 'square');
+          setTimeout(() => this.beep(1318.51, 0.25, 'sine'), 160);
+        }, i * 450);
+      }
+    }
+  };
+
+  // =========================================================
+  // CLOCK & STATUS TELEMETRY
+  // =========================================================
   function updateClock(){
     const now = new Date();
     document.getElementById('clock').textContent = now.toLocaleTimeString('en-US', {hour12:false});
   }
-  updateClock();
   setInterval(updateClock, 1000);
+  updateClock();
 
-  // ---------- ambient status line cycling (flavor) ----------
   const sysStatusEl = document.getElementById('sysStatus');
-  const sysMessages = ["ONLINE", "ALL SYSTEMS NOMINAL", "ARC REACTOR STABLE", "DIAGNOSTICS CLEAR"];
+  const sysMessages = ["ALL SYSTEMS NOMINAL", "ARC REACTOR STABLE", "DEFENSE PROTOCOLS STANDBY", "DIAGNOSTICS OPTIMAL"];
   let sysIdx = 0;
   setInterval(() => {
     sysIdx = (sysIdx + 1) % sysMessages.length;
     sysStatusEl.textContent = sysMessages[sysIdx];
-  }, 5000);
+  }, 6000);
 
-  // ---------- state ----------
+  // =========================================================
+  // DOM ELEMENTS
+  // =========================================================
   const statusText = document.getElementById('statusText');
   const captionEl = document.getElementById('caption');
   const voiceStatus = document.getElementById('voiceStatus');
+  const aiStatus = document.getElementById('aiStatus');
+  const spotifyStatusEl = document.getElementById('spotifyStatus');
   const activateBtn = document.getElementById('activateBtn');
   const testBtn = document.getElementById('testBtn');
-  const waveform = document.getElementById('waveform');
-  const footnote = document.getElementById('footnote');
-  const innerRing = document.getElementById('innerRing');
   const spotifyBtn = document.getElementById('spotifyBtn');
-  const spotifyStatusEl = document.getElementById('spotifyStatus');
+  const settingsBtn = document.getElementById('settingsBtn');
+  const waveform = document.getElementById('waveform');
+  const innerRing = document.getElementById('innerRing');
+  const footnote = document.getElementById('footnote');
+  const textInput = document.getElementById('textInput');
+  const sendBtn = document.getElementById('sendBtn');
+  const weatherBadge = document.getElementById('weatherBadge');
 
   const dataPanel = document.getElementById('dataPanel');
   const panelTitle = document.getElementById('panelTitle');
@@ -504,9 +766,11 @@
   const panelText = document.getElementById('panelText');
   const panelBig = document.getElementById('panelBig');
   const panelCanvas = document.getElementById('panelCanvas');
+  const timersList = document.getElementById('timersList');
 
-  const BAR_COUNT = 18;
-  for(let i=0;i<BAR_COUNT;i++){
+  // Build audio waveform bars
+  const BAR_COUNT = 20;
+  for(let i=0; i<BAR_COUNT; i++){
     const bar = document.createElement('div');
     bar.className = 'bar';
     waveform.appendChild(bar);
@@ -529,7 +793,9 @@
     }
   }
 
-  // ---------- data panel helpers ----------
+  // =========================================================
+  // PANEL HELPERS
+  // =========================================================
   let panelHideTimer = null;
   function showPanel(){
     clearTimeout(panelHideTimer);
@@ -548,7 +814,7 @@
   function showPanelLoading(topic){
     resetPanel();
     panelTitle.textContent = topic.toUpperCase();
-    panelText.textContent = 'RETRIEVING DATA...';
+    panelText.textContent = 'ACCESSING MAINFRAME...';
     showPanel();
   }
   function showPanelArticle(title, extract, imgSrc){
@@ -568,16 +834,9 @@
     showPanel();
     autoHidePanel();
   }
-  function showPanelError(topic){
-    resetPanel();
-    panelTitle.textContent = 'NO DATA';
-    panelText.textContent = 'No results found for "' + topic + '", sir.';
-    showPanel();
-    autoHidePanel(6000);
-  }
   function showPanelGraph(exprLabel){
     resetPanel();
-    panelTitle.textContent = 'GRAPH: f(x) = ' + exprLabel;
+    panelTitle.textContent = 'FUNCTION: f(x) = ' + exprLabel;
     panelCanvas.style.display = 'block';
     showPanel();
     autoHidePanel();
@@ -585,7 +844,7 @@
   }
   function showNowPlaying(track){
     resetPanel();
-    panelTitle.textContent = 'NOW PLAYING';
+    panelTitle.textContent = 'AUDIO STREAM';
     const art = track.album && track.album.images && track.album.images[0];
     if(art){ panelImg.src = art.url; panelImg.style.display = 'block'; }
     panelText.textContent = track.name + ' — ' + track.artists.map(a => a.name).join(', ');
@@ -593,61 +852,9 @@
     autoHidePanel();
   }
 
-  // ---------- response bank ----------
-  function pick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
-
-  function greetingPhrase(){
-    const hour = new Date().getHours();
-    if(hour >= 23 || hour < 5){
-      return pick([
-        "Sir, it's rather late. Shall I dim the lights?",
-        "Burning the midnight oil again, sir?",
-        "Good to hear you, sir. Though you really should be asleep."
-      ]);
-    }
-    if(hour < 12){
-      return pick(["Good morning, sir.", "Good morning. I trust you slept well, sir.", "Rise and shine, sir."]);
-    }
-    if(hour < 18){
-      return pick(["Good afternoon, sir.", "Good afternoon. How can I be of assistance?", "Hello, sir. What can I do for you?"]);
-    }
-    return pick(["Good evening, sir.", "Good evening. Long day, sir?", "Evening, sir. Systems are running smoothly."]);
-  }
-
-  function statusLine(){
-    return pick([
-      "All systems are functioning within normal parameters, sir.",
-      "Everything is running smoothly on my end, sir.",
-      "Diagnostics complete. No issues to report, sir."
-    ]);
-  }
-
-  function timeLine(){
-    const now = new Date();
-    const t = now.toLocaleTimeString('en-US', {hour:'numeric', minute:'2-digit'});
-    return `It's ${t}, sir.`;
-  }
-
-  function thanksLine(){
-    return pick(["No problem, sir.", "Always a pleasure, sir.", "You're welcome, sir.", "Anytime, sir."]);
-  }
-
-  function sleepLine(){
-    return pick(["Powering down, sir. Call if you need me.", "Standing by, sir.", "Going quiet now, sir."]);
-  }
-
-  function confusionLine(){
-    return pick([
-      "I'm afraid I didn't quite catch that, sir.",
-      "My apologies, sir — that one's outside my parameters.",
-      "I don't quite follow, sir. Could you rephrase?",
-      "I'm drawing a blank on that one, sir.",
-      "That request appears to be malformed, sir.",
-      "Come again, sir? I didn't process that."
-    ]);
-  }
-
-  // ---------- speech output ----------
+  // =========================================================
+  // SPEECH OUTPUT ENGINE (ElevenLabs + Browser TTS)
+  // =========================================================
   async function speak(text){
     captionEl.textContent = '"' + text + '"';
     setStatus('speaking');
@@ -664,10 +871,10 @@
           body: JSON.stringify({
             text: text,
             model_id: CONFIG.ELEVEN_LABS_MODEL,
-            voice_settings: { stability: 0.45, similarity_boost: 0.8 }
+            voice_settings: { stability: 0.5, similarity_boost: 0.8 }
           })
         });
-        if(!res.ok) throw new Error('ElevenLabs request failed: ' + res.status);
+        if(!res.ok) throw new Error('ElevenLabs failure: ' + res.status);
         const blob = await res.blob();
         const url = URL.createObjectURL(blob);
         const audio = new Audio(url);
@@ -679,7 +886,7 @@
         audio.play();
         return;
       }catch(err){
-        console.warn('ElevenLabs TTS failed, falling back to browser voice:', err.message);
+        console.warn('ElevenLabs TTS failed, fallback to browser synthesis:', err);
       }
     }
     speakBrowser(text);
@@ -700,8 +907,8 @@
     const utter = new SpeechSynthesisUtterance(text);
     const v = pickBrowserVoice();
     if(v) utter.voice = v;
-    utter.pitch = 0.82;
-    utter.rate = 0.96;
+    utter.pitch = 0.84;
+    utter.rate = 0.98;
     utter.onend = () => setStatus(recognitionActive ? 'listening' : 'standby');
     window.speechSynthesis.speak(utter);
   }
@@ -710,39 +917,121 @@
     window.speechSynthesis.onvoiceschanged = () => {};
   }
 
-  testBtn.addEventListener('click', () => speak(greetingPhrase()));
+  // =========================================================
+  // LIVE WEATHER MODULE (Open-Meteo + Nominatim Geocoding)
+  // =========================================================
+  const weatherCodes = {
+    0: "clear skies", 1: "mainly clear", 2: "partly cloudy", 3: "overcast",
+    45: "foggy", 48: "rime fog", 51: "light drizzle", 61: "slight rain",
+    63: "moderate rain", 65: "heavy rain", 71: "slight snow", 75: "heavy snow",
+    95: "thunderstorms"
+  };
 
-  // ---------- Wikipedia lookups ----------
-  async function wikipediaLookup(topic){
-    topic = topic.trim().replace(/[?.!]+$/, '');
-    if(!topic){ return; }
-    showPanelLoading(topic);
+  async function getWeatherData(cityName = null){
     try{
-      let title = topic;
-      let res = await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(topic)}`);
-      if(!res.ok){
-        const searchRes = await fetch(`https://en.wikipedia.org/w/api.php?action=opensearch&search=${encodeURIComponent(topic)}&limit=1&namespace=0&format=json&origin=*`);
-        const searchData = await searchRes.json();
-        if(searchData[1] && searchData[1][0]){
-          title = searchData[1][0];
-          res = await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title)}`);
+      let lat = 51.5074, lon = -0.1278, locName = "London";
+      if(cityName){
+        const geoRes = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(cityName)}`);
+        const geoData = await geoRes.json();
+        if(geoData && geoData.length > 0){
+          lat = parseFloat(geoData[0].lat);
+          lon = parseFloat(geoData[0].lon);
+          locName = geoData[0].display_name.split(',')[0];
+        } else {
+          speak(`I couldn't locate ${cityName}, sir.`);
+          return;
         }
+      } else if(navigator.geolocation){
+        try{
+          const pos = await new Promise((res, rej) => navigator.geolocation.getCurrentPosition(res, rej, {timeout:5000}));
+          lat = pos.coords.latitude;
+          lon = pos.coords.longitude;
+          locName = "your location";
+        }catch(e){ /* fallback to default */ }
       }
-      if(!res.ok) throw new Error('not found');
+
+      const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`);
       const data = await res.json();
-      const extract = data.extract || 'No summary available.';
-      const thumb = data.thumbnail ? data.thumbnail.source : null;
-      showPanelArticle(data.title || title, extract, thumb);
-      const shortAnswer = extract.split('. ').slice(0, 2).join('. ');
-      speak(shortAnswer.endsWith('.') ? shortAnswer : shortAnswer + '.');
+      if(!data || !data.current_weather) throw new Error('weather error');
+
+      const cw = data.current_weather;
+      const cond = weatherCodes[cw.weathercode] || "clear";
+      const tempC = Math.round(cw.temperature);
+      const tempF = Math.round(tempC * 9/5 + 32);
+
+      weatherBadge.textContent = `${tempC}°C / ${tempF}°F [${cond.toUpperCase()}]`;
+      const response = `Currently in ${locName}, it's ${tempC} degrees Celsius (${tempF} Fahrenheit) with ${cond}, sir.`;
+      
+      resetPanel();
+      panelTitle.textContent = `ATMOSPHERIC TELEMETRY: ${locName.toUpperCase()}`;
+      panelBig.textContent = `${tempC}°C / ${tempF}°F`;
+      panelBig.style.display = 'block';
+      panelText.textContent = `Conditions: ${cond.toUpperCase()} \nWind Speed: ${cw.windspeed} km/h \nStatus: Verified`;
+      showPanel();
+      autoHidePanel();
+
+      speak(response);
     }catch(err){
-      console.warn('Wikipedia lookup failed:', err);
-      showPanelError(topic);
-      speak(`I couldn't find anything on that, sir.`);
+      console.warn(err);
+      speak("Atmospheric telemetry sensors are currently unreachable, sir.");
     }
   }
 
-  // ---------- math parsing ----------
+  // Initial ambient weather check
+  setTimeout(() => getWeatherData(null), 1200);
+
+  // =========================================================
+  // TIMER & ALARM ENGINE
+  // =========================================================
+  const activeTimers = [];
+
+  function setTimer(seconds, label = "Timer"){
+    const endTime = Date.now() + seconds * 1000;
+    const timerObj = {
+      id: Math.random().toString(36).substr(2, 9),
+      label,
+      secondsRemaining: seconds,
+      endTime
+    };
+    activeTimers.push(timerObj);
+    renderTimers();
+    speak(`Timer set for ${seconds >= 60 ? Math.floor(seconds/60) + ' minutes' : seconds + ' seconds'}, sir.`);
+  }
+
+  function renderTimers(){
+    timersList.innerHTML = '';
+    if(activeTimers.length > 0){
+      showPanel();
+      panelTitle.textContent = 'ACTIVE TIMERS';
+    }
+    activeTimers.forEach(t => {
+      const el = document.createElement('div');
+      el.className = 'timer-card';
+      const mins = Math.floor(t.secondsRemaining / 60);
+      const secs = t.secondsRemaining % 60;
+      el.innerHTML = `<span>${t.label.toUpperCase()}</span><span class="timer-val">${mins}:${secs < 10 ? '0' : ''}${secs}</span>`;
+      timersList.appendChild(el);
+    });
+  }
+
+  setInterval(() => {
+    if(activeTimers.length === 0) return;
+    const now = Date.now();
+    for(let i = activeTimers.length - 1; i >= 0; i--){
+      const t = activeTimers[i];
+      t.secondsRemaining = Math.max(0, Math.ceil((t.endTime - now) / 1000));
+      if(t.secondsRemaining <= 0){
+        SoundFX.alarm();
+        speak(`Sir, your ${t.label} has elapsed.`);
+        activeTimers.splice(i, 1);
+      }
+    }
+    renderTimers();
+  }, 1000);
+
+  // =========================================================
+  // MATH & GRAPHING ENGINE (mathjs)
+  // =========================================================
   function wordsToMathExpr(raw){
     let s = ' ' + raw.toLowerCase() + ' ';
     s = s.replace(/\bwhat is\b|\bwhat's\b|\bcalculate\b|\bsolve\b|\bequals\b|\bequal to\b/g, ' ');
@@ -754,7 +1043,7 @@
     s = s.replace(/\bminus\b/g, '-');
     s = s.replace(/\btimes\b|\bmultiplied by\b/g, '*');
     s = s.replace(/\bdivided by\b|\bover\b/g, '/');
-    s = s.replace(/\bpercent\b/g, '/100');
+    s = s.replace(/\bpercent of\b/g, '* 0.01 *');
     return s.trim();
   }
 
@@ -767,15 +1056,14 @@
     s = s.replace(/square root of x/g, 'sqrt(x)');
     s = s.replace(/x squared/g, 'x^2');
     s = s.replace(/x cubed/g, 'x^3');
-    s = s.trim();
-    return s || 'x';
+    return s.trim() || 'x';
   }
 
   function drawGraph(canvas, exprStr){
     const ctx = canvas.getContext('2d');
     const w = canvas.width, h = canvas.height;
     ctx.clearRect(0, 0, w, h);
-    ctx.fillStyle = 'rgba(7,24,35,0.4)';
+    ctx.fillStyle = 'rgba(7,24,35,0.85)';
     ctx.fillRect(0, 0, w, h);
 
     const range = 10;
@@ -791,10 +1079,10 @@
     let compiled;
     try{ compiled = math.compile(exprStr); }catch(err){ return false; }
 
-    ctx.strokeStyle = '#a9f3ff';
-    ctx.lineWidth = 2;
-    ctx.shadowColor = 'rgba(79,216,255,0.6)';
-    ctx.shadowBlur = 6;
+    ctx.strokeStyle = getComputedStyle(document.body).getPropertyValue('--cyan-bright').trim() || '#a9f3ff';
+    ctx.lineWidth = 2.5;
+    ctx.shadowColor = 'rgba(79,216,255,0.8)';
+    ctx.shadowBlur = 8;
     ctx.beginPath();
     let started = false;
     for(let px = 0; px <= w; px++){
@@ -814,18 +1102,96 @@
     return true;
   }
 
-  // ---------- Spotify: PKCE auth ----------
-  function generateRandomString(length){
-    const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  // =========================================================
+  // WIKIPEDIA KNOWLEDGE LOOKUPS
+  // =========================================================
+  async function wikipediaLookup(topic){
+    topic = topic.trim().replace(/[?.!]+$/, '');
+    if(!topic) return;
+    showPanelLoading(topic);
+    try{
+      let title = topic;
+      let res = await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(topic)}`);
+      if(!res.ok){
+        const searchRes = await fetch(`https://en.wikipedia.org/w/api.php?action=opensearch&search=${encodeURIComponent(topic)}&limit=1&namespace=0&format=json&origin=*`);
+        const searchData = await searchRes.json();
+        if(searchData[1] && searchData[1][0]){
+          title = searchData[1][0];
+          res = await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title)}`);
+        }
+      }
+      if(!res.ok) throw new Error('Not found');
+      const data = await res.json();
+      const extract = data.extract || 'No detailed telemetry available.';
+      const thumb = data.thumbnail ? data.thumbnail.source : null;
+      showPanelArticle(data.title || title, extract, thumb);
+      const shortAnswer = extract.split('. ').slice(0, 2).join('. ');
+      speak(shortAnswer.endsWith('.') ? shortAnswer : shortAnswer + '.');
+    }catch(err){
+      resetPanel();
+      panelTitle.textContent = 'NO DATA';
+      panelText.textContent = 'No database entries matching "' + topic + '", sir.';
+      showPanel();
+      autoHidePanel(6000);
+      speak(`I couldn't find records on that topic in the archives, sir.`);
+    }
+  }
+
+  // =========================================================
+  // LLM INTELLIGENCE LINK (OPTIONAL OPENAI / GROQ)
+  // =========================================================
+  async function askLLM(prompt){
+    if(!CONFIG.LLM_API_KEY) return false;
+    try{
+      showPanelLoading('NEURAL REASONING');
+      const res = await fetch(CONFIG.LLM_API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${CONFIG.LLM_API_KEY}`
+        },
+        body: JSON.stringify({
+          model: CONFIG.LLM_MODEL,
+          messages: [
+            {
+              role: "system",
+              content: "You are J.A.R.V.I.S., Tony Stark's sophisticated, highly intelligent, British AI assistant. Address the user as 'sir'. Keep answers concise, articulate, witty, and under 3 sentences."
+            },
+            { role: "user", content: prompt }
+          ]
+        })
+      });
+      const data = await res.json();
+      if(data.choices && data.choices[0]){
+        const reply = data.choices[0].message.content;
+        resetPanel();
+        panelTitle.textContent = 'INTELLIGENCE REPORT';
+        panelText.textContent = reply;
+        showPanel();
+        autoHidePanel();
+        speak(reply);
+        return true;
+      }
+    }catch(err){
+      console.warn('LLM Query failed:', err);
+    }
+    return false;
+  }
+
+  // =========================================================
+  // SPOTIFY PKCE AUTH & CONTROLS
+  // =========================================================
+  function generateRandomString(len){
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
     let text = '';
-    const values = crypto.getRandomValues(new Uint8Array(length));
-    values.forEach(v => text += possible[v % possible.length]);
+    const v = crypto.getRandomValues(new Uint8Array(len));
+    v.forEach(x => text += chars[x % chars.length]);
     return text;
   }
-  function base64urlencode(buffer){
+  function base64urlencode(buf){
     let str = '';
-    const bytes = new Uint8Array(buffer);
-    for(let i=0;i<bytes.byteLength;i++){ str += String.fromCharCode(bytes[i]); }
+    const bytes = new Uint8Array(buf);
+    for(let i=0; i<bytes.byteLength; i++){ str += String.fromCharCode(bytes[i]); }
     return btoa(str).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
   }
   async function generateCodeChallenge(verifier){
@@ -835,7 +1201,7 @@
 
   async function connectSpotify(){
     if(!CONFIG.SPOTIFY_CLIENT_ID){
-      alert('Add your Spotify Client ID in the CONFIG block first.\n\nRedirect URI to register in your Spotify app settings:\n' + SPOTIFY_REDIRECT_URI);
+      alert('Configure your Spotify Client ID in the HUD Config drawer first.');
       return;
     }
     const verifier = generateRandomString(64);
@@ -850,42 +1216,6 @@
       code_challenge: challenge
     });
     window.location = 'https://accounts.spotify.com/authorize?' + params.toString();
-  }
-
-  function saveSpotifyTokens(data){
-    localStorage.setItem('spotify_access_token', data.access_token);
-    if(data.refresh_token) localStorage.setItem('spotify_refresh_token', data.refresh_token);
-    localStorage.setItem('spotify_expires_at', String(Date.now() + (data.expires_in || 3600) * 1000));
-  }
-
-  async function refreshSpotifyToken(){
-    const refresh_token = localStorage.getItem('spotify_refresh_token');
-    if(!refresh_token || !CONFIG.SPOTIFY_CLIENT_ID) return null;
-    try{
-      const body = new URLSearchParams({
-        grant_type: 'refresh_token',
-        refresh_token,
-        client_id: CONFIG.SPOTIFY_CLIENT_ID
-      });
-      const res = await fetch('https://accounts.spotify.com/api/token', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body
-      });
-      const data = await res.json();
-      if(data.access_token){
-        saveSpotifyTokens({ ...data, refresh_token: data.refresh_token || refresh_token });
-        return data.access_token;
-      }
-    }catch(err){ console.warn('Spotify token refresh failed:', err); }
-    return null;
-  }
-
-  async function getValidSpotifyToken(){
-    const token = localStorage.getItem('spotify_access_token');
-    const expiresAt = parseInt(localStorage.getItem('spotify_expires_at') || '0', 10);
-    if(token && Date.now() < expiresAt - 5000) return token;
-    return await refreshSpotifyToken();
   }
 
   async function handleSpotifyRedirect(){
@@ -908,32 +1238,49 @@
       });
       const data = await res.json();
       if(data.access_token){
-        saveSpotifyTokens(data);
+        localStorage.setItem('spotify_access_token', data.access_token);
+        if(data.refresh_token) localStorage.setItem('spotify_refresh_token', data.refresh_token);
+        localStorage.setItem('spotify_expires_at', String(Date.now() + (data.expires_in || 3600) * 1000));
         window.history.replaceState({}, document.title, window.location.pathname);
         updateSpotifyUI(true);
       }
-    }catch(err){
-      console.warn('Spotify auth exchange failed:', err);
-    }
+    }catch(err){ console.warn(err); }
   }
 
   function updateSpotifyUI(connected){
-    if(connected){
-      spotifyStatusEl.textContent = 'CONNECTED';
-      spotifyBtn.textContent = 'Spotify Connected';
-      spotifyBtn.classList.add('active');
-    } else {
-      spotifyStatusEl.textContent = 'NOT CONNECTED';
-      spotifyBtn.textContent = 'Connect Spotify';
-      spotifyBtn.classList.remove('active');
-    }
+    spotifyStatusEl.textContent = connected ? 'CONNECTED' : 'DISCONNECTED';
+    spotifyBtn.textContent = connected ? 'Spotify Linked' : 'Spotify Link';
+    spotifyBtn.classList.toggle('active', connected);
   }
 
-  spotifyBtn.addEventListener('click', connectSpotify);
-  spotifyBtn.title = 'Redirect URI to register in your Spotify app: ' + SPOTIFY_REDIRECT_URI;
+  async function getSpotifyToken(){
+    const token = localStorage.getItem('spotify_access_token');
+    const expiresAt = parseInt(localStorage.getItem('spotify_expires_at') || '0', 10);
+    if(token && Date.now() < expiresAt - 5000) return token;
+    const refreshToken = localStorage.getItem('spotify_refresh_token');
+    if(!refreshToken || !CONFIG.SPOTIFY_CLIENT_ID) return null;
+    try{
+      const body = new URLSearchParams({
+        grant_type: 'refresh_token',
+        refresh_token: refreshToken,
+        client_id: CONFIG.SPOTIFY_CLIENT_ID
+      });
+      const res = await fetch('https://accounts.spotify.com/api/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body
+      });
+      const data = await res.json();
+      if(data.access_token){
+        localStorage.setItem('spotify_access_token', data.access_token);
+        return data.access_token;
+      }
+    }catch(e){}
+    return null;
+  }
 
   async function spotifyFetch(path, options = {}){
-    const token = await getValidSpotifyToken();
+    const token = await getSpotifyToken();
     if(!token) throw new Error('not_connected');
     return fetch('https://api.spotify.com/v1' + path, {
       ...options,
@@ -941,173 +1288,146 @@
     });
   }
 
-  function handleSpotifyError(err){
-    if(err && err.message === 'not_connected'){
-      speak('Spotify is not connected yet, sir.');
-    } else {
-      console.warn(err);
-      speak('I ran into trouble reaching Spotify, sir.');
-    }
-  }
-
   async function spotifyPlay(query){
     try{
       if(query){
-        const searchRes = await spotifyFetch('/search?q=' + encodeURIComponent(query) + '&type=track&limit=1');
-        const searchData = await searchRes.json();
-        const track = searchData.tracks && searchData.tracks.items && searchData.tracks.items[0];
-        if(!track){ speak("I couldn't find that track, sir."); return; }
-        const res = await spotifyFetch('/me/player/play', {
+        const sRes = await spotifyFetch('/search?q=' + encodeURIComponent(query) + '&type=track&limit=1');
+        const sData = await sRes.json();
+        const track = sData.tracks && sData.tracks.items && sData.tracks.items[0];
+        if(!track){ speak("I couldn't find that track in the archives, sir."); return; }
+        await spotifyFetch('/me/player/play', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ uris: [track.uri] })
         });
-        if(res.status === 404){ speak("I don't see an active Spotify device, sir. Open Spotify first."); return; }
         speak(`Playing ${track.name} by ${track.artists[0].name}, sir.`);
         showNowPlaying(track);
       } else {
-        const res = await spotifyFetch('/me/player/play', { method: 'PUT' });
-        if(res.status === 404){ speak("I don't see an active Spotify device, sir."); return; }
-        speak('Resuming playback, sir.');
+        await spotifyFetch('/me/player/play', { method: 'PUT' });
+        speak('Resuming audio playback, sir.');
       }
-    }catch(err){ handleSpotifyError(err); }
+    }catch(e){ speak('Spotify playback device not detected. Open Spotify on your device first, sir.'); }
   }
 
-  async function spotifyPause(){
-    try{
-      const res = await spotifyFetch('/me/player/pause', { method: 'PUT' });
-      if(res.status === 404){ speak('No active device, sir.'); return; }
-      speak('Music paused, sir.');
-    }catch(err){ handleSpotifyError(err); }
-  }
+  spotifyBtn.addEventListener('click', connectSpotify);
 
-  async function spotifyNext(){
-    try{ await spotifyFetch('/me/player/next', { method: 'POST' }); speak('Skipping, sir.'); }
-    catch(err){ handleSpotifyError(err); }
-  }
+  // =========================================================
+  // INTENT & COMMAND PROCESSING MATRIX
+  // =========================================================
+  function pick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
 
-  async function spotifyPrevious(){
-    try{ await spotifyFetch('/me/player/previous', { method: 'POST' }); speak('Going back, sir.'); }
-    catch(err){ handleSpotifyError(err); }
-  }
-
-  async function spotifyNowPlaying(){
-    try{
-      const res = await spotifyFetch('/me/player/currently-playing');
-      if(res.status === 204){ speak('Nothing is playing right now, sir.'); return; }
-      const data = await res.json();
-      if(data && data.item){
-        speak(`This is ${data.item.name} by ${data.item.artists[0].name}, sir.`);
-        showNowPlaying(data.item);
-      } else {
-        speak('Nothing is playing right now, sir.');
-      }
-    }catch(err){ handleSpotifyError(err); }
-  }
-
-  // ---------- command handling ----------
-  let lastTriggerTime = 0;
-  const COOLDOWN_MS = 2000;
-
-  function handleTranscript(transcript){
-    const now = Date.now();
-    if(now - lastTriggerTime < COOLDOWN_MS) return;
+  async function handleTranscript(transcript){
+    SoundFX.chime();
     const t = transcript.toLowerCase().trim();
 
+    // Sleep / Shutdown
     if(t.includes('go to sleep') || t.includes('power down') || t.includes('shut down')){
-      lastTriggerTime = now;
-      speak(sleepLine());
-      setTimeout(() => stopRecognition(), 1400);
+      speak("Powering down primary modules, sir. Standing by.");
+      setTimeout(() => stopRecognition(), 1200);
       return;
     }
-    if(t.includes('status report') || t.includes('how are you')){
-      lastTriggerTime = now; speak(statusLine()); return;
-    }
-    if(t.includes('what time') || t.includes("what's the time")){
-      lastTriggerTime = now; speak(timeLine()); return;
-    }
-    if(t.includes('thank you') || t.includes('thanks')){
-      lastTriggerTime = now; speak(thanksLine()); return;
+
+    // Status Report
+    if(t.includes('status report') || t.includes('diagnostics') || t.includes('how are you')){
+      speak("All systems are functioning within optimal tolerances, sir. Arc reactor power at 100%.");
+      return;
     }
 
-    // spotify commands (checked before generic "what is/what's" patterns)
-    if(t.includes('connect spotify')){
-      lastTriggerTime = now; connectSpotify(); return;
+    // Time
+    if(t.includes('what time') || t.includes("what's the time")){
+      const now = new Date();
+      speak(`It is ${now.toLocaleTimeString('en-US', {hour:'numeric', minute:'2-digit'})}, sir.`);
+      return;
     }
-    if(t.includes("what's playing") || t.includes('what is playing') || t.includes('what song is this')){
-      lastTriggerTime = now; spotifyNowPlaying(); return;
+
+    // Weather
+    if(t.includes('weather') || t.includes('temperature') || t.includes('forecast')){
+      const cityMatch = t.match(/(?:in|for)\s+([a-zA-Z\s]+)/);
+      getWeatherData(cityMatch ? cityMatch[1] : null);
+      return;
     }
-    if(t === 'pause' || t.includes('pause the music') || t.includes('pause music')){
-      lastTriggerTime = now; spotifyPause(); return;
+
+    // Timer (e.g. "set a timer for 5 minutes" or "set timer for 30 seconds")
+    const timerMatch = t.match(/timer\s+(?:for\s+)?(\d+)\s*(minute|min|second|sec)/);
+    if(timerMatch){
+      const val = parseInt(timerMatch[1], 10);
+      const isMin = timerMatch[2].startsWith('min');
+      setTimer(isMin ? val * 60 : val, `Timer (${val} ${timerMatch[2]})`);
+      return;
+    }
+
+    // Spotify controls
+    if(t.includes('pause music') || t === 'pause'){
+      try{ await spotifyFetch('/me/player/pause', {method:'PUT'}); speak('Playback paused, sir.'); }catch(e){}
+      return;
     }
     if(t.includes('skip') || t.includes('next song')){
-      lastTriggerTime = now; spotifyNext(); return;
+      try{ await spotifyFetch('/me/player/next', {method:'POST'}); speak('Skipping track, sir.'); }catch(e){}
+      return;
     }
-    if(t.includes('previous song') || t.includes('go back a song') || t.includes('last song')){
-      lastTriggerTime = now; spotifyPrevious(); return;
-    }
-    if(t.startsWith('play ') || t === 'play music' || t === 'play some music'){
-      lastTriggerTime = now;
-      let query = t.replace(/^play\s+/, '').replace(/\bon spotify\b/, '').trim();
-      if(query === 'music' || query === 'some music' || query === '') query = null;
-      spotifyPlay(query);
+    if(t.startsWith('play ') || t === 'play music'){
+      let q = t.replace(/^play\s+/, '').replace(/\bon spotify\b/, '').trim();
+      if(q === 'music' || q === '') q = null;
+      spotifyPlay(q);
       return;
     }
 
-    // graph / plot
+    // Graphing / Plotting
     if(/^(graph|plot)\b/.test(t)){
-      lastTriggerTime = now;
-      const exprStr = wordsToFunctionExpr(t);
-      const canvas = showPanelGraph(exprStr);
-      const ok = drawGraph(canvas, exprStr);
-      speak(ok ? "Here's the graph, sir." : "I couldn't plot that one, sir.");
+      const expr = wordsToFunctionExpr(t);
+      const canvas = showPanelGraph(expr);
+      const ok = drawGraph(canvas, expr);
+      speak(ok ? "Rendering holographic plot, sir." : "I was unable to compile that function, sir.");
       return;
     }
 
-    // math questions
-    if(/^(what is|what's|calculate|solve)\b/.test(t)){
-      const mathExpr = wordsToMathExpr(t);
-      if(/[\d]/.test(mathExpr)){
-        try{
-          const result = math.evaluate(mathExpr);
-          if(typeof result === 'number' && isFinite(result)){
-            lastTriggerTime = now;
-            const rounded = Math.round(result * 10000) / 10000;
-            showPanelMath(mathExpr, rounded);
-            speak(`That's ${rounded}, sir.`);
-            return;
-          }
-        }catch(err){ /* not valid math, fall through */ }
-      }
+    // Unit Conversion & Math
+    if(t.includes('convert ') || /^(what is|what's|calculate|solve)\b/.test(t)){
+      const cleanMath = wordsToMathExpr(t);
+      try{
+        const evalResult = math.evaluate(cleanMath.replace(/convert/g, ''));
+        if(evalResult !== undefined){
+          const resStr = evalResult.toString();
+          showPanelMath(cleanMath, resStr);
+          speak(`That would be ${resStr}, sir.`);
+          return;
+        }
+      }catch(e){}
     }
 
-    // wikipedia knowledge questions
+    // Wikipedia Knowledge Lookups
     const wikiMatch = t.match(/^(what is|what's|who is|tell me about|define)\s+(.+)/);
     if(wikiMatch){
-      lastTriggerTime = now;
       wikipediaLookup(wikiMatch[2]);
       return;
     }
 
-    if(t.includes('hey jarvis') || t.includes('hey, jarvis')){
-      lastTriggerTime = now;
-      speak(greetingPhrase());
+    // General Greeting
+    if(t.includes('hey jarvis') || t.includes('hello jarvis') || t === 'jarvis'){
+      speak("At your service, sir. How may I assist you?");
       return;
     }
 
-    // fallback: only respond with confusion if it heard its own name
-    if(t.includes('jarvis')){
-      lastTriggerTime = now;
-      speak(confusionLine());
+    // Advanced Neural LLM Fallback (if configured)
+    if(CONFIG.LLM_API_KEY){
+      const answered = await askLLM(t);
+      if(answered) return;
     }
+
+    // Default polite confusion
+    speak(pick([
+      "I'm afraid that request is outside my designated parameters, sir.",
+      "Could you rephrase that, sir? I didn't quite process it.",
+      "I'm drawing a blank in the database on that one, sir."
+    ]));
   }
 
-  // ---------- speech recognition (self-healing) ----------
-  let recognitionActive = false;
+  // =========================================================
+  // SPEECH RECOGNITION MODULE (Continuous Auto-Healing)
+  // =========================================================
   let recognition = null;
+  let recognitionActive = false;
   let wantsToListen = false;
-  let consecutiveErrors = 0;
-  let restartTimer = null;
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
   function buildRecognition(){
@@ -1118,56 +1438,39 @@
 
     rec.onstart = () => {
       recognitionActive = true;
-      consecutiveErrors = 0;
       voiceStatus.textContent = 'ONLINE';
       setStatus('listening');
       activateBtn.textContent = 'Deactivate Voice';
       activateBtn.classList.add('active');
-      requestWakeLock();
     };
 
     rec.onerror = (e) => {
-      if(e.error === 'not-allowed' || e.error === 'service-not-allowed'){
+      if(e.error === 'not-allowed'){
         wantsToListen = false;
         voiceStatus.textContent = 'MIC BLOCKED';
-        footnote.textContent = 'Microphone access was blocked. Serve this over HTTPS or localhost (not file://) and allow the mic prompt.';
-        return;
       }
-      consecutiveErrors++;
     };
 
     rec.onend = () => {
       recognitionActive = false;
-      activateBtn.textContent = 'Activate Voice';
-      activateBtn.classList.remove('active');
-      setStatus('standby');
-
       if(!wantsToListen){
+        activateBtn.textContent = 'Activate Voice';
+        activateBtn.classList.remove('active');
         voiceStatus.textContent = 'OFFLINE';
+        setStatus('standby');
         return;
       }
-      if(consecutiveErrors > 10){
-        voiceStatus.textContent = 'NEEDS REACTIVATION';
-        footnote.textContent = 'Voice module hit repeated errors and stopped. Click Activate Voice to restart it.';
-        wantsToListen = false;
-        return;
-      }
-      voiceStatus.textContent = 'RECONNECTING...';
-      const delay = Math.min(300 + consecutiveErrors * 350, 4000);
-      clearTimeout(restartTimer);
-      restartTimer = setTimeout(() => {
-        try{ recognition.start(); }catch(e){ /* may already be starting */ }
-      }, delay);
+      setTimeout(() => {
+        try{ if(wantsToListen) recognition.start(); }catch(e){}
+      }, 350);
     };
 
-    rec.onresult = (event) => {
-      let transcript = '';
-      let isFinal = false;
-      for(let i = event.resultIndex; i < event.results.length; i++){
-        transcript += event.results[i][0].transcript;
-        if(event.results[i].isFinal) isFinal = true;
+    rec.onresult = (evt) => {
+      let finalStr = '';
+      for(let i = evt.resultIndex; i < evt.results.length; i++){
+        if(evt.results[i].isFinal) finalStr += evt.results[i][0].transcript;
       }
-      if(isFinal) handleTranscript(transcript);
+      if(finalStr) handleTranscript(finalStr);
     };
 
     return rec;
@@ -1175,106 +1478,147 @@
 
   function startRecognition(){
     if(!SpeechRecognition){
-      voiceStatus.textContent = 'UNSUPPORTED BROWSER';
-      footnote.textContent = 'This browser does not support voice recognition. Try Chrome or Edge on desktop.';
+      voiceStatus.textContent = 'UNSUPPORTED';
+      footnote.textContent = 'Voice recognition requires Google Chrome, Edge, or a WebSpeech-compatible browser.';
       return;
     }
     wantsToListen = true;
-    consecutiveErrors = 0;
     recognition = buildRecognition();
-    try{ recognition.start(); }catch(err){ console.error(err); }
+    try{ recognition.start(); }catch(e){}
   }
 
   function stopRecognition(){
     wantsToListen = false;
-    clearTimeout(restartTimer);
     if(recognition) recognition.stop();
-    if(analyserCtx){ analyserCtx.close(); analyserCtx = null; }
-    releaseWakeLock();
   }
 
-  // ---------- wake lock ----------
-  let wakeLock = null;
-  async function requestWakeLock(){
-    try{ if('wakeLock' in navigator){ wakeLock = await navigator.wakeLock.request('screen'); } }
-    catch(err){ /* ignore */ }
-  }
-  function releaseWakeLock(){
-    if(wakeLock){ wakeLock.release().catch(()=>{}); wakeLock = null; }
-  }
-  document.addEventListener('visibilitychange', () => {
-    if(document.visibilityState === 'visible' && wantsToListen && !wakeLock){ requestWakeLock(); }
-  });
-
-  // ---------- mic level -> waveform ----------
-  let analyserCtx = null;
+  // =========================================================
+  // MIC LEVEL -> WAVEFORM VISUALIZER
+  // =========================================================
+  let micAnalyserCtx = null;
   async function startWaveform(){
     try{
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      analyserCtx = new (window.AudioContext || window.webkitAudioContext)();
-      const source = analyserCtx.createMediaStreamSource(stream);
-      const analyser = analyserCtx.createAnalyser();
+      micAnalyserCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const src = micAnalyserCtx.createMediaStreamSource(stream);
+      const analyser = micAnalyserCtx.createAnalyser();
       analyser.fftSize = 64;
-      source.connect(analyser);
+      src.connect(analyser);
       const data = new Uint8Array(analyser.frequencyBinCount);
 
       function tick(){
-        if(!analyserCtx) return;
+        if(!micAnalyserCtx) return;
         analyser.getByteFrequencyData(data);
         bars.forEach((bar, i) => {
           const v = data[i % data.length] || 0;
-          const hgt = Math.max(4, (v/255) * 28);
-          bar.style.height = hgt + 'px';
-          bar.style.background = recognitionActive ? 'var(--cyan)' : 'var(--cyan-dim)';
-          bar.style.opacity = 0.5 + (v/255)*0.5;
+          const h = Math.max(4, (v/255) * 32);
+          bar.style.height = h + 'px';
+          bar.style.opacity = 0.4 + (v/255)*0.6;
         });
         requestAnimationFrame(tick);
       }
       tick();
-    }catch(err){ console.warn('Mic waveform unavailable:', err.message); }
+    }catch(e){}
   }
 
   activateBtn.addEventListener('click', () => {
+    SoundFX.beep(600, 0.06);
     if(wantsToListen){
       stopRecognition();
-      voiceStatus.textContent = 'OFFLINE';
     } else {
       startRecognition();
       startWaveform();
     }
   });
 
-  setInterval(() => {
-    if(!analyserCtx){
-      bars.forEach(bar => {
-        const hgt = 4 + Math.random()*6;
-        bar.style.height = hgt + 'px';
-        bar.style.opacity = 0.25 + Math.random()*0.2;
-      });
-    }
-  }, 400);
+  testBtn.addEventListener('click', () => {
+    SoundFX.chime();
+    speak("Good day, sir. All diagnostic telemetry streams are functioning smoothly.");
+  });
 
-  voiceStatus.textContent = SpeechRecognition ? 'READY' : 'UNSUPPORTED';
+  // Text console execution
+  function submitTextCommand(){
+    const val = textInput.value.trim();
+    if(!val) return;
+    textInput.value = '';
+    handleTranscript(val);
+  }
+  sendBtn.addEventListener('click', submitTextCommand);
+  textInput.addEventListener('keydown', (e) => { if(e.key === 'Enter') submitTextCommand(); });
 
-  // ---------- auto-resume listening if permission already granted ----------
-  async function tryAutoStart(){
-    if(!navigator.permissions || !navigator.permissions.query) return;
-    try{
-      const status = await navigator.permissions.query({ name: 'microphone' });
-      if(status.state === 'granted'){ startRecognition(); startWaveform(); }
-      status.onchange = () => {
-        if(status.state === 'granted' && !wantsToListen){ startRecognition(); startWaveform(); }
-      };
-    }catch(err){ /* Firefox doesn't support querying 'microphone' — ignore */ }
+  // =========================================================
+  // CONFIGURATION & THEMES
+  // =========================================================
+  const settingsModal = document.getElementById('settingsModal');
+  const themeSelect = document.getElementById('themeSelect');
+  const cfgLlmKey = document.getElementById('cfgLlmKey');
+  const cfgLlmUrl = document.getElementById('cfgLlmUrl');
+  const cfgElevenKey = document.getElementById('cfgElevenKey');
+  const cfgSpotifyId = document.getElementById('cfgSpotifyId');
+  const cfgSoundFx = document.getElementById('cfgSoundFx');
+
+  function applyTheme(th){
+    document.body.setAttribute('data-theme', th);
   }
 
-  // ---------- boot ----------
+  settingsBtn.addEventListener('click', () => {
+    SoundFX.beep(750, 0.08);
+    themeSelect.value = CONFIG.THEME;
+    cfgLlmKey.value = CONFIG.LLM_API_KEY;
+    cfgLlmUrl.value = CONFIG.LLM_API_URL;
+    cfgElevenKey.value = CONFIG.ELEVEN_LABS_API_KEY;
+    cfgSpotifyId.value = CONFIG.SPOTIFY_CLIENT_ID;
+    cfgSoundFx.value = String(CONFIG.SOUND_FX);
+    settingsModal.classList.add('active');
+  });
+
+  document.getElementById('closeConfigBtn').addEventListener('click', () => {
+    settingsModal.classList.remove('active');
+  });
+
+  document.getElementById('saveConfigBtn').addEventListener('click', () => {
+    CONFIG.THEME = themeSelect.value;
+    CONFIG.LLM_API_KEY = cfgLlmKey.value.trim();
+    CONFIG.LLM_API_URL = cfgLlmUrl.value.trim() || DEFAULT_CONFIG.LLM_API_URL;
+    CONFIG.ELEVEN_LABS_API_KEY = cfgElevenKey.value.trim();
+    CONFIG.SPOTIFY_CLIENT_ID = cfgSpotifyId.value.trim();
+    CONFIG.SOUND_FX = cfgSoundFx.value === 'true';
+
+    localStorage.setItem('jarvis_config', JSON.stringify(CONFIG));
+    applyTheme(CONFIG.THEME);
+    aiStatus.textContent = CONFIG.LLM_API_KEY ? 'NEURAL LLM' : 'BUILT-IN';
+    settingsModal.classList.remove('active');
+    SoundFX.chime();
+    speak("Configuration updated successfully, sir.");
+  });
+
+  // Ambient waveform idle animation
+  setInterval(() => {
+    if(!micAnalyserCtx){
+      bars.forEach(b => {
+        b.style.height = (4 + Math.random()*6) + 'px';
+        b.style.opacity = 0.35;
+      });
+    }
+  }, 350);
+
+  // =========================================================
+  // BOOT SEQUENCE
+  // =========================================================
   (async function boot(){
-    if(localStorage.getItem('spotify_access_token')){ updateSpotifyUI(true); }
+    applyTheme(CONFIG.THEME || 'classic');
+    aiStatus.textContent = CONFIG.LLM_API_KEY ? 'NEURAL LLM' : 'BUILT-IN';
+    if(localStorage.getItem('spotify_access_token')) updateSpotifyUI(true);
     await handleSpotifyRedirect();
-    tryAutoStart();
+    
+    // Auto-resume listening if browser permission is already granted
+    if(navigator.permissions && navigator.permissions.query){
+      try{
+        const st = await navigator.permissions.query({ name: 'microphone' });
+        if(st.state === 'granted'){ startRecognition(); startWaveform(); }
+      }catch(e){}
+    }
   })();
 </script>
-
 </body>
 </html>
