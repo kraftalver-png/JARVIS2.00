@@ -1055,4 +1055,91 @@ $('saveConfigBtn').addEventListener('click',()=>{
 })();
 </script>
 </body>
+  <!-- ========================================== -->
+<!-- J.A.R.V.I.S. AUTOMATIC SYNC BRIDGE        -->
+<!-- ========================================== -->
+<script>
+  window.addEventListener('message', (event) => {
+    try {
+      let data = event.data;
+      if (typeof data === 'string') {
+        data = JSON.parse(data);
+      }
+
+      if (data && data.type === 'jarvis-request-events') {
+        const events = [];
+
+        // 1. Search localStorage for saved planner data
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          try {
+            const rawVal = localStorage.getItem(key);
+            const parsed = JSON.parse(rawVal);
+
+            if (Array.isArray(parsed)) {
+              parsed.forEach((item) => {
+                if (typeof item === 'object') {
+                  events.push({
+                    day: item.day || item.weekday || key || 'Monday',
+                    time: item.time || '',
+                    title: item.title || item.task || item.text || 'Untitled Task',
+                    desc: item.desc || item.notes || ''
+                  });
+                } else if (typeof item === 'string' && item.trim()) {
+                  events.push({
+                    day: key,
+                    title: item.trim(),
+                    time: '',
+                    desc: ''
+                  });
+                }
+              });
+            } else if (typeof parsed === 'object' && parsed !== null) {
+              Object.keys(parsed).forEach((dayKey) => {
+                const dayItems = parsed[dayKey];
+                if (Array.isArray(dayItems)) {
+                  dayItems.forEach((task) => {
+                    events.push({
+                      day: dayKey,
+                      title: typeof task === 'string' ? task : (task.title || task.text || 'Task'),
+                      time: task.time || '',
+                      desc: task.desc || ''
+                    });
+                  });
+                }
+              });
+            }
+          } catch (e) {
+            // Not JSON, continue checking
+          }
+        }
+
+        // 2. Fallback: If no localStorage, scrape rendered DOM text/cards
+        if (events.length === 0) {
+          const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+          document.querySelectorAll('div, section, td, th, li').forEach((el) => {
+            const text = el.innerText ? el.innerText.trim() : '';
+            const matchDay = days.find((d) => el.className.toLowerCase().includes(d) || el.id.toLowerCase().includes(d));
+            if (matchDay && text.length > 2 && text.length < 150) {
+              events.push({
+                day: matchDay.charAt(0).toUpperCase() + matchDay.slice(1),
+                title: text,
+                time: '',
+                desc: ''
+              });
+            }
+          });
+        }
+
+        // 3. Send the schedule back to JARVIS
+        event.source.postMessage(JSON.stringify({
+          type: 'jarvis-events',
+          events: events
+        }), '*');
+      }
+    } catch (err) {
+      console.warn('JARVIS Bridge error:', err);
+    }
+  });
+</script>
 </html>
